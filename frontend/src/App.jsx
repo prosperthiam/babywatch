@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-const API = 'http://localhost:4001/api';
+const API = 'https://babywatch-production.up.railway.app/api';
 // ─── MOCK DATA ───────────────────────────────────────────────
 const USERS = {
   "parent@demo.fr":   { password: "demo123", role: "parent",   name: "Sophie Dupont",    avatar: "👩‍👧", id: "P001" },
