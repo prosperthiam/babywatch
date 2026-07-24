@@ -120,7 +120,7 @@ const AuthPage = ({ onLogin }) => {
   }
 };
 
- const handleRegister = async () => {
+const handleRegister = async () => {
   if (!name || !email || !password) { setError("Remplissez tous les champs."); return; }
   if (password.length < 6) { setError("Mot de passe trop court."); return; }
   try {
@@ -133,8 +133,11 @@ const AuthPage = ({ onLogin }) => {
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error); return; }
-    localStorage.setItem('token', data.token);
-    onLogin(data.user);
+    if (data.needsVerification) {
+      setError("");
+      alert("✅ Compte créé ! Vérifiez votre email pour confirmer votre inscription.");
+      setMode("login");
+    }
   } catch(e) {
     setError("Erreur de connexion au serveur.");
   }
