@@ -94,6 +94,55 @@ const Toast = ({ toast }) => (
   </div>
 );
 
+// ─── CONFIRM PAGE ────────────────────────────────────────────
+const ConfirmPage = ({ onLogin }) => {
+  const [status, setStatus] = useState("loading");
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+    if (!token) { setStatus("error"); setMessage("Token manquant."); return; }
+
+    fetch(`${API}/auth/confirm/${token}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+          setStatus("success");
+          setTimeout(() => onLogin(data.user), 2000);
+        } else {
+          setStatus("error");
+          setMessage(data.error || "Lien invalide.");
+        }
+      })
+      .catch(() => { setStatus("error"); setMessage("Erreur de connexion."); });
+  }, []);
+
+  return (
+    <div style={{ minHeight:"100vh", background:G.night, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:420, padding:40, textAlign:"center" }}>
+        <div style={{ fontSize:"3rem", marginBottom:16 }}>
+          {status === "loading" ? "⏳" : status === "success" ? "🎉" : "❌"}
+        </div>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:12 }}>
+          {status === "loading" ? "Vérification en cours…" : status === "success" ? "Compte confirmé !" : "Erreur"}
+        </div>
+        <div style={{ color:G.muted, fontSize:"0.9rem" }}>
+          {status === "loading" ? "Patientez quelques secondes…"
+           : status === "success" ? "Redirection vers votre tableau de bord…"
+           : message}
+        </div>
+        {status === "error" && (
+          <button onClick={() => window.location.href = "/"} style={{ marginTop:20, background:G.teal, color:"#0f1923", border:"none", borderRadius:10, padding:"12px 24px", fontFamily:"'Nunito',sans-serif", fontWeight:800, cursor:"pointer" }}>
+            Retour à l'accueil
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── AUTH ────────────────────────────────────────────────────
 const AuthPage = ({ onLogin }) => {
   const [mode, setMode] = useState("login");
@@ -786,8 +835,17 @@ export default function App() {
   const [bookings, setBookings] = useState(BOOKINGS_INIT);
   const [toast, showToast] = useToast();
 
-  const handleLogin  = (u) => { setUser(u); setPage("home"); };
+ const handleLogin  = (u) => { setUser(u); setPage("home"); window.history.pushState({}, "", "/"); };
   const handleLogout = ()  => { setUser(null); setPage("home"); };
+
+  const isConfirmPage = window.location.pathname === "/confirm" || window.location.search.includes("token=");
+
+  if (isConfirmPage) return (
+    <>
+      <style>{`@keyframes bw-blink{50%{opacity:0}} *{box-sizing:border-box} body{background:#0f1923}`}</style>
+      <ConfirmPage onLogin={handleLogin} />
+    </>
+  );
 
   const addBooking     = (b)  => setBookings(prev => [{ ...b, parentId:user.id, parentName:user.name }, ...prev]);
   const cancelBooking  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Réservation annulée.", "err"); };
