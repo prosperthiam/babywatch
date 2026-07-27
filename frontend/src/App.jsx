@@ -133,11 +133,9 @@ const handleRegister = async () => {
     });
     const data = await res.json();
     if (!res.ok) { setError(data.error); return; }
-    if (data.needsVerification) {
-      setError("");
-      alert("✅ Compte créé ! Vérifiez votre email pour confirmer votre inscription.");
-      setMode("login");
-    }
+    setError("");
+    alert(`📧 ${data.message}`);
+    setMode("login");
   } catch(e) {
     setError("Erreur de connexion au serveur.");
   }
