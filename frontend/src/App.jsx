@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 const API = 'https://babywatch-production.up.railway.app/api';
-// ─── MOCK DATA ───────────────────────────────────────────────
+
 const USERS = {
   "parent@demo.fr":   { password: "demo123", role: "parent",   name: "Sophie Dupont",    avatar: "👩‍👧", id: "P001" },
   "sitter@demo.fr":   { password: "demo123", role: "sitter",   name: "Camille Bertrand", avatar: "👩", id: "S001" },
@@ -94,7 +94,7 @@ const Toast = ({ toast }) => (
   </div>
 );
 
-// ─── CONFIRM PAGE ────────────────────────────────────────────
+// ─── CONFIRM PAGE ─────────────────────────────────────────────
 const ConfirmPage = ({ onLogin }) => {
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
@@ -103,7 +103,6 @@ const ConfirmPage = ({ onLogin }) => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
     if (!token) { setStatus("error"); setMessage("Token manquant."); return; }
-
     fetch(`${API}/auth/confirm/${token}`)
       .then(r => r.json())
       .then(data => {
@@ -143,10 +142,10 @@ const ConfirmPage = ({ onLogin }) => {
   );
 };
 
-// ─── FORGOT PASSWORD PAGE ─────────────────────────────────
+// ─── FORGOT PASSWORD PAGE ─────────────────────────────────────
 const ForgotPasswordPage = ({ onBack }) => {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState("form"); // form | sent
+  const [status, setStatus] = useState("form");
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
@@ -192,13 +191,12 @@ const ForgotPasswordPage = ({ onBack }) => {
   );
 };
 
-// ─── RESET PASSWORD PAGE ──────────────────────────────────
+// ─── RESET PASSWORD PAGE ──────────────────────────────────────
 const ResetPasswordPage = ({ onBack }) => {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [status, setStatus] = useState("form"); // form | done
+  const [status, setStatus] = useState("form");
   const [error, setError] = useState("");
-
   const token = new URLSearchParams(window.location.search).get("token");
 
   const handleSubmit = async () => {
@@ -246,7 +244,7 @@ const ResetPasswordPage = ({ onBack }) => {
   );
 };
 
-// ─── AUTH ────────────────────────────────────────────────────
+// ─── AUTH PAGE ────────────────────────────────────────────────
 const AuthPage = ({ onLogin }) => {
   const [mode, setMode] = useState("login");
   const [role, setRole] = useState("parent");
@@ -254,49 +252,72 @@ const AuthPage = ({ onLogin }) => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
   const handleLogin = async () => {
-  setError("");
-  try {
-    const res = await fetch(`${API}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error); return; }
-    localStorage.setItem('token', data.token);
-    onLogin(data.user);
-  } catch(e) {
-    setError("Erreur de connexion au serveur.");
-  }
-};
-
-const handleRegister = async () => {
-  if (!name || !email || !password) { setError("Remplissez tous les champs."); return; }
-  if (password.length < 6) { setError("Mot de passe trop court."); return; }
-
-  try {
-    const [firstName, ...rest] = name.split(' ');
-    const lastName = rest.join(' ') || '';
-    const res = await fetch(`${API}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, role, firstName, lastName })
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error); return; }
     setError("");
-    alert(`📧 ${data.message}`);
-    setMode("login");
-  } catch(e) {
-    setError("Erreur de connexion au serveur.");
-  }
-};
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error); return; }
+      localStorage.setItem('token', data.token);
+      onLogin(data.user);
+    } catch(e) {
+      setError("Erreur de connexion au serveur.");
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!name || !email || !password) { setError("Remplissez tous les champs."); return; }
+    if (password.length < 6) { setError("Mot de passe trop court."); return; }
+    try {
+      const [firstName, ...rest] = name.split(' ');
+      const lastName = rest.join(' ') || '';
+      const res = await fetch(`${API}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role, firstName, lastName })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error); return; }
+      setError("");
+      setSuccessMsg(data.message);
+      setMode("success");
+    } catch(e) {
+      setError("Erreur de connexion au serveur.");
+    }
+  };
 
   const demoLogin = (em) => { const user = USERS[em]; onLogin({ ...user, email: em }); };
 
-if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")} />;
+  if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")} />;
+
+  if (mode === "success") return (
+    <div style={{ minHeight:"100vh", background:G.night, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:420, padding:40, textAlign:"center" }}>
+        <div style={{ fontSize:"3rem", marginBottom:16 }}>📧</div>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:12 }}>Vérifiez votre email !</div>
+        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:24, lineHeight:1.6 }}>
+          Un email de confirmation a été envoyé à<br />
+          <strong style={{ color:G.teal }}>{email}</strong>
+        </div>
+        <div style={{ background:G.card, borderRadius:12, padding:"16px", marginBottom:24, border:`1px solid ${G.border}` }}>
+          <div style={{ fontSize:"0.82rem", color:G.muted, lineHeight:1.7 }}>
+            📬 Ouvrez votre boîte mail<br />
+            🔗 Cliquez sur le lien de confirmation<br />
+            ✅ Votre compte sera activé automatiquement
+          </div>
+        </div>
+        <button onClick={() => setMode("login")} style={{ background:"none", border:`1px solid ${G.border}`, color:G.muted, padding:"10px 20px", borderRadius:10, cursor:"pointer", fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem" }}>
+          ← Retour à la connexion
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ minHeight:"100vh", background:G.night, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
@@ -344,15 +365,15 @@ if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")
           {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
 
           {mode === "login"
-  ? <Btn onClick={handleLogin} variant="teal" size="lg" full>Se connecter →</Btn>
-  : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full>Créer mon compte →</Btn>
-}
+            ? <Btn onClick={handleLogin} variant="teal" size="lg" full>Se connecter →</Btn>
+            : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full>Créer mon compte →</Btn>
+          }
 
-{mode === "login" && (
-  <button onClick={() => setMode("forgot")} style={{ marginTop:12, width:"100%", background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem", fontFamily:"'Inter',sans-serif", textDecoration:"underline" }}>
-    Mot de passe oublié ?
-  </button>
-)}
+          {mode === "login" && (
+            <button onClick={() => setMode("forgot")} style={{ marginTop:12, width:"100%", background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem", fontFamily:"'Inter',sans-serif", textDecoration:"underline" }}>
+              Mot de passe oublié ?
+            </button>
+          )}
 
           {mode === "login" && (
             <div style={{ marginTop:24, paddingTop:20, borderTop:`1px solid ${G.border}` }}>
@@ -374,7 +395,7 @@ if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")
   );
 };
 
-// ─── NAV ─────────────────────────────────────────────────────
+// ─── NAV ──────────────────────────────────────────────────────
 const Nav = ({ user, activePage, onNav, onLogout }) => {
   const isParent = user.role === "parent";
   const navItems = isParent
@@ -409,7 +430,7 @@ const Nav = ({ user, activePage, onNav, onLogout }) => {
   );
 };
 
-// ─── PARENT HOME ─────────────────────────────────────────────
+// ─── PARENT HOME ──────────────────────────────────────────────
 const ParentHome = ({ user, bookings, onNav }) => {
   const myBookings = bookings.filter(b => b.parentId === user.id);
   const upcoming = myBookings.filter(b => b.status==="confirmed"||b.status==="pending");
@@ -425,13 +446,12 @@ const ParentHome = ({ user, bookings, onNav }) => {
           <Btn onClick={() => onNav("camera")} variant="ghost">📹 Caméra live</Btn>
         </div>
       </div>
-
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
         {[
-          { label:"Gardes à venir",    val:upcoming.length,                                          icon:"📅", color:G.teal   },
-          { label:"En attente",        val:myBookings.filter(b=>b.status==="pending").length,         icon:"⏳", color:G.amber  },
-          { label:"Gardes effectuées", val:myBookings.filter(b=>b.status==="completed").length,       icon:"✅", color:G.green  },
-          { label:"Babysitters favoris",val:2,                                                        icon:"⭐", color:G.purple },
+          { label:"Gardes à venir",     val:upcoming.length,                                    icon:"📅", color:G.teal   },
+          { label:"En attente",         val:myBookings.filter(b=>b.status==="pending").length,   icon:"⏳", color:G.amber  },
+          { label:"Gardes effectuées",  val:myBookings.filter(b=>b.status==="completed").length, icon:"✅", color:G.green  },
+          { label:"Babysitters favoris",val:2,                                                   icon:"⭐", color:G.purple },
         ].map(s => (
           <Card key={s.label} style={{ textAlign:"center" }}>
             <div style={{ fontSize:"1.8rem", marginBottom:6 }}>{s.icon}</div>
@@ -440,7 +460,6 @@ const ParentHome = ({ user, bookings, onNav }) => {
           </Card>
         ))}
       </div>
-
       {next && (
         <Card>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
@@ -458,7 +477,6 @@ const ParentHome = ({ user, bookings, onNav }) => {
           </div>
         </Card>
       )}
-
       <Card>
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Historique récent</div>
         {myBookings.filter(b=>b.status==="completed").slice(0,3).map(b => (
@@ -480,19 +498,16 @@ const ParentHome = ({ user, bookings, onNav }) => {
   );
 };
 
-// ─── SEARCH ──────────────────────────────────────────────────
+// ─── SEARCH ───────────────────────────────────────────────────
 const SearchSitters = ({ onBook, showToast }) => {
   const [search, setSearch] = useState("");
   const [filterCam, setFilterCam] = useState(false);
   const [selected, setSelected] = useState(null);
-
   const filtered = SITTERS_LIST.filter(s =>
     (s.name.toLowerCase().includes(search.toLowerCase()) || s.city.toLowerCase().includes(search.toLowerCase()) || s.tags.some(t => t.toLowerCase().includes(search.toLowerCase()))) &&
     (!filterCam || s.camera)
   );
-
   if (selected) return <BookingForm sitter={selected} onBack={() => setSelected(null)} onConfirm={(b) => { onBook(b); setSelected(null); showToast("🎉 Demande envoyée !", "ok"); }} />;
-
   return (
     <div>
       <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>Trouver un babysitter</div>
@@ -535,7 +550,7 @@ const SearchSitters = ({ onBook, showToast }) => {
   );
 };
 
-// ─── BOOKING FORM ────────────────────────────────────────────
+// ─── BOOKING FORM ─────────────────────────────────────────────
 const BookingForm = ({ sitter, onBack, onConfirm }) => {
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
   const [date, setDate] = useState(tomorrow.toISOString().slice(0,10));
@@ -546,7 +561,6 @@ const BookingForm = ({ sitter, onBack, onConfirm }) => {
   const [notes, setNotes] = useState("");
   const [camera, setCamera] = useState(sitter.camera);
   const price = parseInt(duration) * sitter.price + (camera ? parseInt(duration) * 2 : 0);
-
   return (
     <div>
       <button onClick={onBack} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", marginBottom:20 }}>← Retour</button>
@@ -610,7 +624,7 @@ const BookingForm = ({ sitter, onBack, onConfirm }) => {
   );
 };
 
-// ─── PARENT BOOKINGS ─────────────────────────────────────────
+// ─── PARENT BOOKINGS ──────────────────────────────────────────
 const ParentBookings = ({ user, bookings, onCancel, onNav }) => {
   const [filter, setFilter] = useState("all");
   const my = bookings.filter(b => b.parentId === user.id);
@@ -662,7 +676,7 @@ const ParentBookings = ({ user, bookings, onCancel, onNav }) => {
   );
 };
 
-// ─── SITTER HOME ─────────────────────────────────────────────
+// ─── SITTER HOME ──────────────────────────────────────────────
 const SitterHome = ({ user, bookings, onNav }) => {
   const my = bookings.filter(b => b.sitterId === user.id);
   const upcoming = my.filter(b=>b.status==="confirmed"||b.status==="pending");
@@ -680,10 +694,10 @@ const SitterHome = ({ user, bookings, onNav }) => {
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
         {[
-          { label:"Missions à venir",      val:upcoming.length,                                        icon:"📅", color:G.amber  },
-          { label:"En attente réponse",    val:my.filter(b=>b.status==="pending").length,               icon:"⏳", color:G.coral  },
-          { label:"Missions réalisées",    val:my.filter(b=>b.status==="completed").length,             icon:"✅", color:G.green  },
-          { label:"Gains ce mois",         val:earnings+"€",                                            icon:"💰", color:G.teal   },
+          { label:"Missions à venir",   val:upcoming.length,                                  icon:"📅", color:G.amber },
+          { label:"En attente réponse", val:my.filter(b=>b.status==="pending").length,         icon:"⏳", color:G.coral },
+          { label:"Missions réalisées", val:my.filter(b=>b.status==="completed").length,       icon:"✅", color:G.green },
+          { label:"Gains ce mois",      val:earnings+"€",                                      icon:"💰", color:G.teal  },
         ].map(s => (
           <Card key={s.label} style={{ textAlign:"center" }}>
             <div style={{ fontSize:"1.8rem", marginBottom:6 }}>{s.icon}</div>
@@ -716,7 +730,7 @@ const SitterHome = ({ user, bookings, onNav }) => {
   );
 };
 
-// ─── SITTER MISSIONS ─────────────────────────────────────────
+// ─── SITTER MISSIONS ──────────────────────────────────────────
 const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
   const [filter, setFilter] = useState("all");
   const my = bookings.filter(b => b.sitterId === user.id);
@@ -766,7 +780,7 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
   );
 };
 
-// ─── SITTER PROFILE ──────────────────────────────────────────
+// ─── SITTER PROFILE ───────────────────────────────────────────
 const SitterProfile = ({ user, bookings, showToast }) => {
   const me = SITTERS_LIST.find(s => s.id === user.id) || SITTERS_LIST[0];
   const my = bookings.filter(b => b.sitterId === user.id && b.status==="completed");
@@ -851,18 +865,16 @@ const SitterProfile = ({ user, bookings, showToast }) => {
   );
 };
 
-// ─── CAMERA PAGE ─────────────────────────────────────────────
+// ─── CAMERA PAGE ──────────────────────────────────────────────
 const CameraPage = ({ user }) => {
   const [active, setActive] = useState(false);
   const [stream, setStream] = useState(null);
   const [time, setTime] = useState("--:--:--");
   const videoRef = useRef();
-
   useEffect(() => {
     const iv = setInterval(() => setTime(new Date().toTimeString().slice(0,8)), 1000);
     return () => clearInterval(iv);
   }, []);
-
   const start = async () => {
     try {
       const s = await navigator.mediaDevices.getUserMedia({ video:{ width:1280, height:720 }, audio:false });
@@ -871,13 +883,11 @@ const CameraPage = ({ user }) => {
       setActive(true);
     } catch(e) { alert("Accès caméra refusé."); }
   };
-
   const stop = () => {
     if (stream) stream.getTracks().forEach(t=>t.stop());
     setStream(null); setActive(false);
     if (videoRef.current) videoRef.current.srcObject = null;
   };
-
   return (
     <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:20, alignItems:"start" }}>
       <div>
@@ -947,10 +957,11 @@ export default function App() {
   const [bookings, setBookings] = useState(BOOKINGS_INIT);
   const [toast, showToast] = useToast();
 
- const handleLogin  = (u) => { setUser(u); setPage("home"); window.history.pushState({}, "", "/"); };
+  const handleLogin  = (u) => { setUser(u); setPage("home"); window.history.pushState({}, "", "/"); };
   const handleLogout = ()  => { setUser(null); setPage("home"); };
 
-  const isConfirmPage = window.location.pathname === "/confirm" || window.location.search.includes("token=");
+  const isConfirmPage = window.location.pathname === "/confirm" || (window.location.search.includes("token=") && !window.location.pathname.includes("reset"));
+  const isResetPage   = window.location.pathname === "/reset-password" || (window.location.search.includes("token=") && window.location.pathname.includes("reset"));
 
   if (isConfirmPage) return (
     <>
@@ -959,14 +970,12 @@ export default function App() {
     </>
   );
 
-  const isResetPage = window.location.pathname === "/reset-password" || window.location.search.includes("token=") && window.location.pathname.includes("reset");
-
-if (isResetPage) return (
-  <>
-    <style>{`*{box-sizing:border-box} body{background:#0f1923}`}</style>
-    <ResetPasswordPage onBack={() => window.location.href = "/"} />
-  </>
-);
+  if (isResetPage) return (
+    <>
+      <style>{`*{box-sizing:border-box} body{background:#0f1923}`}</style>
+      <ResetPasswordPage onBack={() => window.location.href = "/"} />
+    </>
+  );
 
   const addBooking     = (b)  => setBookings(prev => [{ ...b, parentId:user.id, parentName:user.name }, ...prev]);
   const cancelBooking  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Réservation annulée.", "err"); };
