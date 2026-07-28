@@ -625,14 +625,134 @@ const BookingForm = ({ sitter, onBack, onConfirm }) => {
   );
 };
 
+// ─── REVIEW MODAL ─────────────────────────────────────────────
+const ReviewModal = ({ booking, onClose, onSubmit }) => {
+  const [rating, setRating] = useState(5);
+  const [review, setReview] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!review.trim()) { setError("Écrivez un commentaire."); return; }
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/reviews/${booking.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ rating, review })
+      });
+      const data = await res.json();
+      if (res.ok) { onSubmit(booking.id, rating, review); }
+      else { setError(data.error); }
+    } catch(e) {
+      setError("Erreur de connexion.");
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", backdropFilter:"blur(4px)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:480, overflow:"hidden", boxShadow:"0 24px 80px #0008", animation:"slideUp 0.3s ease" }}>
+        <style>{`@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}`}</style>
+
+        {/* Header */}
+        <div style={{ background:G.night, padding:"24px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.2rem", color:"#fff" }}>⭐ Laisser un avis</div>
+            <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:4 }}>Garde avec {booking.sitterName} · {booking.date}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.1)", border:"none", color:G.muted, width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:"1.1rem" }}>✕</button>
+        </div>
+
+        <div style={{ padding:"28px" }}>
+          {/* Étoiles */}
+          <div style={{ marginBottom:20 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:10 }}>Note globale</label>
+            <div style={{ display:"flex", gap:8 }}>
+              {[1,2,3,4,5].map(star => (
+                <button key={star} onClick={() => setRating(star)} style={{ background:"none", border:"none", fontSize:"2rem", cursor:"pointer", opacity: star <= rating ? 1 : 0.25, transform: star <= rating ? "scale(1.1)" : "scale(1)", transition:"all 0.15s" }}>
+                  ⭐
+                </button>
+              ))}
+              <span style={{ color:G.muted, fontSize:"0.85rem", alignSelf:"center", marginLeft:8 }}>
+                {["","Très insuffisant","Insuffisant","Bien","Très bien","Excellent !"][rating]}
+              </span>
+            </div>
+          </div>
+
+          {/* Critères */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:20 }}>
+            {[
+              ["Ponctualité", "⏰"],
+              ["Bienveillance", "💝"],
+              ["Communication", "💬"],
+              ["Propreté", "✨"],
+            ].map(([label, icon]) => (
+              <div key={label} style={{ background:G.card, borderRadius:10, padding:"10px 14px", border:`1px solid ${G.border}`, display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:"1.2rem" }}>{icon}</span>
+                <span style={{ fontSize:"0.78rem", color:G.muted }}>{label}</span>
+                <span style={{ marginLeft:"auto", color:G.amber, fontSize:"0.8rem" }}>{"⭐".repeat(rating)}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Commentaire */}
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Votre commentaire</label>
+            <textarea
+              value={review}
+              onChange={e => setReview(e.target.value)}
+              placeholder="Décrivez votre expérience avec ce babysitter… Était-il/elle ponctuel(le) ? Comment se sont passées les interactions avec votre enfant ?"
+              style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"12px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:110, lineHeight:1.6 }}
+            />
+            <div style={{ textAlign:"right", fontSize:"0.72rem", color:G.muted, marginTop:4 }}>{review.length}/300</div>
+          </div>
+
+          {/* Tags rapides */}
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
+            {["Ponctuel(le)","Bienveillant(e)","Organisé(e)","Enfants adorent","Très professionnel(le)","Je recommande"].map(tag => (
+              <button key={tag} onClick={() => setReview(prev => prev ? prev + ", " + tag.toLowerCase() : tag)} style={{ background:G.teal+"11", border:`1px solid ${G.teal}33`, color:G.teal, borderRadius:100, padding:"4px 12px", fontSize:"0.72rem", fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
+                + {tag}
+              </button>
+            ))}
+          </div>
+
+          {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
+
+          <div style={{ display:"flex", gap:10 }}>
+            <Btn onClick={onClose} variant="ghost" full>Annuler</Btn>
+            <Btn onClick={handleSubmit} variant="teal" full disabled={loading}>
+              {loading ? "Publication…" : "✅ Publier mon avis →"}
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── PARENT BOOKINGS ──────────────────────────────────────────
-const ParentBookings = ({ user, bookings, onCancel, onNav }) => {
+const ParentBookings = ({ user, bookings, onCancel, onNav, onReview }) => {
   const [filter, setFilter] = useState("all");
+  const [reviewBooking, setReviewBooking] = useState(null);
   const my = bookings.filter(b => b.parentId === user.id);
   const tabs = [["all","Toutes"],["pending","En attente"],["confirmed","Confirmées"],["completed","Terminées"]];
   const filtered = filter==="all" ? my : my.filter(b=>b.status===filter);
+
   return (
     <div>
+      {reviewBooking && (
+        <ReviewModal
+          booking={reviewBooking}
+          onClose={() => setReviewBooking(null)}
+          onSubmit={(id, rating, review) => {
+            onReview(id, rating, review);
+            setReviewBooking(null);
+          }}
+        />
+      )}
+
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
           <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>Mes gardes</div>
@@ -640,6 +760,7 @@ const ParentBookings = ({ user, bookings, onCancel, onNav }) => {
         </div>
         <Btn onClick={() => onNav("search")} variant="teal">+ Nouvelle réservation</Btn>
       </div>
+
       <div style={{ display:"flex", gap:6, marginBottom:20 }}>
         {tabs.map(([id,label]) => (
           <button key={id} onClick={() => setFilter(id)} style={{ padding:"7px 16px", borderRadius:8, border:`1px solid ${filter===id?G.teal:G.border}`, background:filter===id?G.teal+"22":"transparent", color:filter===id?G.teal:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.8rem", cursor:"pointer" }}>
@@ -647,6 +768,7 @@ const ParentBookings = ({ user, bookings, onCancel, onNav }) => {
           </button>
         ))}
       </div>
+
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
         {filtered.length===0 && <div style={{ textAlign:"center", padding:"40px", color:G.muted }}>Aucune garde dans cette catégorie.</div>}
         {filtered.map(b => (
@@ -663,11 +785,25 @@ const ParentBookings = ({ user, bookings, onCancel, onNav }) => {
                 <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:4 }}>📅 {b.date} à {b.time} · ⏱ {b.duration} · 👶 {b.children} enfant{b.children>1?"s":""}</div>
                 <div style={{ color:G.muted, fontSize:"0.78rem" }}>📍 {b.address}</div>
                 {b.notes && <div style={{ fontSize:"0.75rem", color:G.muted, background:"rgba(255,255,255,0.04)", borderRadius:6, padding:"6px 10px", marginTop:8 }}>💬 {b.notes}</div>}
-                {b.rating && <div style={{ marginTop:8, color:G.amber, fontSize:"0.8rem" }}>{"⭐".repeat(b.rating)} Noté</div>}
+
+                {/* Avis existant */}
+                {b.rating && (
+                  <div style={{ marginTop:10, background:G.amber+"11", border:`1px solid ${G.amber}33`, borderRadius:8, padding:"10px 12px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
+                      <span style={{ color:G.amber }}>{"⭐".repeat(b.rating)}</span>
+                      <span style={{ fontSize:"0.72rem", color:G.muted }}>Votre avis</span>
+                    </div>
+                    {b.review && <div style={{ fontSize:"0.8rem", color:G.text, lineHeight:1.5 }}>"{b.review}"</div>}
+                  </div>
+                )}
               </div>
+
               <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                 {b.camera && b.status==="confirmed" && <Btn onClick={() => onNav("camera")} variant="teal" size="sm">📹 Live</Btn>}
                 {b.status==="pending" && <Btn onClick={() => onCancel(b.id)} variant="danger" size="sm">Annuler</Btn>}
+                {b.status==="completed" && !b.rating && (
+                  <Btn onClick={() => setReviewBooking(b)} variant="amber" size="sm">⭐ Noter</Btn>
+                )}
               </div>
             </div>
           </Card>
@@ -1193,6 +1329,10 @@ export default function App() {
 
   const isConfirmPage = window.location.pathname === "/confirm" || (window.location.search.includes("token=") && !window.location.pathname.includes("reset"));
   const isResetPage   = window.location.pathname === "/reset-password" || (window.location.search.includes("token=") && window.location.pathname.includes("reset"));
+const addReview = (id, rating, review) => {
+  setBookings(prev => prev.map(b => b.id===id ? {...b, rating, review} : b));
+  showToast("⭐ Avis publié avec succès !", "ok");
+};
 
   if (isConfirmPage) return (
     <>
@@ -1232,7 +1372,7 @@ export default function App() {
   const renderPage = () => {
     if (page==="home")     return isParent ? <ParentHome user={user} bookings={bookings} onNav={setPage}/> : <SitterHome user={user} bookings={bookings} onNav={setPage}/>;
     if (page==="search")   return <SearchSitters onBook={addBooking} showToast={showToast}/>;
-    if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage}/>;
+   if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview}/>;
     if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission}/>;
     if (page==="profile")  return <SitterProfile user={user} bookings={bookings} showToast={showToast}/>;
     if (page==="camera")   return <CameraPage user={user}/>;
