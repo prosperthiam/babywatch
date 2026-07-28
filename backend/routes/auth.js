@@ -135,4 +135,68 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ── MOT DE PASSE OUBLIÉ ──
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'Email introuvable.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 heure
+
+    await pool.query(
+      'INSERT INTO email_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      [user.id, token, expiresAt]
+    );
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+
+    await resend.emails.send({
+      from: 'BabyWatch <onboarding@resend.dev>',
+      to: email,
+      subject: '🔑 Réinitialisation de votre mot de passe BabyWatch',
+      html: `
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;background:#0f1923;color:#e2e8f0;border-radius:12px;">
+          <h1 style="color:#2dd4bf;">🍼 BabyWatch</h1>
+          <h2>Réinitialisation du mot de passe</h2>
+          <p style="color:#94a3b8;">Cliquez ci-dessous pour réinitialiser votre mot de passe. Ce lien expire dans 1 heure.</p>
+          <a href="${resetUrl}" style="display:inline-block;background:#2dd4bf;color:#0f1923;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:bold;margin:20px 0;">
+            🔑 Réinitialiser mon mot de passe
+          </a>
+          <p style="color:#64748b;font-size:0.8rem;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+        </div>
+      `
+    });
+
+    res.json({ message: `Email de réinitialisation envoyé à ${email}` });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ── RÉINITIALISER LE MOT DE PASSE ──
+router.post('/reset-password', async (req, res) => {
+  const { token, password } = req.body;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM email_tokens WHERE token = $1 AND used = false AND expires_at > NOW()',
+      [token]
+    );
+    if (result.rows.length === 0) {
+      return res.status(400).json({ error: 'Lien invalide ou expiré.' });
+    }
+    const { user_id } = result.rows[0];
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query('UPDATE users SET password = $1 WHERE id = $2', [hash, user_id]);
+    await pool.query('UPDATE email_tokens SET used = true WHERE token = $1', [token]);
+    res.json({ message: 'Mot de passe réinitialisé avec succès !' });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
 module.exports = router;

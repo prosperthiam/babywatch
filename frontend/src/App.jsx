@@ -143,6 +143,109 @@ const ConfirmPage = ({ onLogin }) => {
   );
 };
 
+// ─── FORGOT PASSWORD PAGE ─────────────────────────────────
+const ForgotPasswordPage = ({ onBack }) => {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState("form"); // form | sent
+  const [error, setError] = useState("");
+
+  const handleSubmit = async () => {
+    if (!email) { setError("Entrez votre email."); return; }
+    try {
+      const res = await fetch(`${API}/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error); return; }
+      setStatus("sent");
+    } catch(e) {
+      setError("Erreur de connexion au serveur.");
+    }
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:G.night, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:420, overflow:"hidden", boxShadow:"0 24px 80px #0008" }}>
+        <div style={{ padding:"28px" }}>
+          {status === "form" ? (
+            <>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>🔑 Mot de passe oublié</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Entrez votre email pour recevoir un lien de réinitialisation.</div>
+              <Input label="Adresse email" type="email" value={email} onChange={setEmail} placeholder="vous@email.fr" icon="✉️" />
+              {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
+              <Btn onClick={handleSubmit} variant="teal" size="lg" full>Envoyer le lien →</Btn>
+              <button onClick={onBack} style={{ marginTop:14, width:"100%", background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", fontFamily:"'Inter',sans-serif" }}>← Retour à la connexion</button>
+            </>
+          ) : (
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontSize:"3rem", marginBottom:16 }}>📧</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:12 }}>Email envoyé !</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Vérifiez votre boîte mail et cliquez sur le lien pour réinitialiser votre mot de passe.</div>
+              <Btn onClick={onBack} variant="ghost" full>← Retour à la connexion</Btn>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── RESET PASSWORD PAGE ──────────────────────────────────
+const ResetPasswordPage = ({ onBack }) => {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [status, setStatus] = useState("form"); // form | done
+  const [error, setError] = useState("");
+
+  const token = new URLSearchParams(window.location.search).get("token");
+
+  const handleSubmit = async () => {
+    if (!password || !confirm) { setError("Remplissez tous les champs."); return; }
+    if (password.length < 6) { setError("Mot de passe trop court."); return; }
+    if (password !== confirm) { setError("Les mots de passe ne correspondent pas."); return; }
+    try {
+      const res = await fetch(`${API}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error); return; }
+      setStatus("done");
+    } catch(e) {
+      setError("Erreur de connexion au serveur.");
+    }
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:G.night, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:420, overflow:"hidden", boxShadow:"0 24px 80px #0008" }}>
+        <div style={{ padding:"28px" }}>
+          {status === "form" ? (
+            <>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>🔑 Nouveau mot de passe</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Choisissez un nouveau mot de passe sécurisé.</div>
+              <Input label="Nouveau mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" icon="🔒" />
+              <Input label="Confirmer le mot de passe" type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" icon="🔒" />
+              {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
+              <Btn onClick={handleSubmit} variant="teal" size="lg" full>Réinitialiser →</Btn>
+            </>
+          ) : (
+            <div style={{ textAlign:"center" }}>
+              <div style={{ fontSize:"3rem", marginBottom:16 }}>✅</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:12 }}>Mot de passe mis à jour !</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</div>
+              <Btn onClick={() => { window.history.pushState({}, "", "/"); onBack(); }} variant="teal" full>Se connecter →</Btn>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── AUTH ────────────────────────────────────────────────────
 const AuthPage = ({ onLogin }) => {
   const [mode, setMode] = useState("login");
@@ -172,6 +275,7 @@ const AuthPage = ({ onLogin }) => {
 const handleRegister = async () => {
   if (!name || !email || !password) { setError("Remplissez tous les champs."); return; }
   if (password.length < 6) { setError("Mot de passe trop court."); return; }
+if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")} />;
   try {
     const [firstName, ...rest] = name.split(' ');
     const lastName = rest.join(' ') || '';
@@ -239,6 +343,13 @@ const handleRegister = async () => {
 
           {mode === "login"
             ? <Btn onClick={handleLogin} variant="teal" size="lg" full>Se connecter →</Btn>
+
+           {mode === "login" && (
+  <button onClick={() => setMode("forgot")} style={{ marginTop:12, width:"100%", background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem", fontFamily:"'Inter',sans-serif", textDecoration:"underline" }}>
+    Mot de passe oublié ?
+  </button>
+)}
+
             : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full>Créer mon compte →</Btn>
           }
 
@@ -846,6 +957,15 @@ export default function App() {
       <ConfirmPage onLogin={handleLogin} />
     </>
   );
+
+  const isResetPage = window.location.pathname === "/reset-password" || window.location.search.includes("token=") && window.location.pathname.includes("reset");
+
+if (isResetPage) return (
+  <>
+    <style>{`*{box-sizing:border-box} body{background:#0f1923}`}</style>
+    <ResetPasswordPage onBack={() => window.location.href = "/"} />
+  </>
+);
 
   const addBooking     = (b)  => setBookings(prev => [{ ...b, parentId:user.id, parentName:user.name }, ...prev]);
   const cancelBooking  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Réservation annulée.", "err"); };
