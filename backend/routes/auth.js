@@ -4,8 +4,10 @@ const jwt = require('jsonwebtoken');
 const { Pool } = require('pg');
 const crypto = require('crypto');
 const { sendConfirmationEmail } = require('../services/email');
+const { Resend } = require('resend');
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── INSCRIPTION ──
 router.post('/register', async (req, res) => {
