@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+// v2.1 - fix sitter profile
 const API = 'https://babywatch-production.up.railway.app/api';
 
 const USERS = {
@@ -960,29 +961,21 @@ const SitterProfile = ({ user, bookings, showToast }) => {
           </Card>
 
           <Card>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Documents certifiés</div>
-            {[
-              { label:"🆔 Pièce d'identité", status: verifyStatus === "verified" ? "Vérifiée ✓" : "Non vérifiée", color: verifyStatus === "verified" ? G.green : G.coral },
-              { label:"🏥 Premiers secours", status:"À renseigner", color:G.muted },
-              { label:"🚔 Casier judiciaire", status:"À renseigner", color:G.muted },
-            ].map(([,doc]) => doc).map((_, i) => {
-              const docs = [
-                { label:"🆔 Pièce d'identité", status: verifyStatus === "verified" ? "Vérifiée ✓" : verifyStatus === "pending" ? "En cours…" : "Non vérifiée", color: verifyStatus === "verified" ? G.green : verifyStatus === "pending" ? G.amber : G.coral },
-                { label:"🏥 Premiers secours", status:"À renseigner", color:G.muted },
-                { label:"🚔 Casier judiciaire", status:"À renseigner", color:G.muted },
-              ];
-              const d = docs[i];
-              return (
-                <div key={d.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
-                  <span style={{ color:G.text, fontSize:"0.85rem" }}>{d.label}</span>
-                  <span style={{ color:d.color, fontWeight:600, fontSize:"0.75rem" }}>{d.status}</span>
-                </div>
-              );
-            })}
-            <button onClick={() => setTab("identity")} style={{ marginTop:14, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>
-              → Vérifier mon identité
-            </button>
-          </Card>
+  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Documents certifiés</div>
+  {[
+    { label:"🆔 Pièce d'identité", status: verifyStatus==="verified"?"Vérifiée ✓":verifyStatus==="pending"?"En cours…":"Non vérifiée", color: verifyStatus==="verified"?G.green:verifyStatus==="pending"?G.amber:G.coral },
+    { label:"🏥 Premiers secours", status:"À renseigner", color:G.muted },
+    { label:"🚔 Casier judiciaire", status:"À renseigner", color:G.muted },
+  ].map(d => (
+    <div key={d.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
+      <span style={{ color:G.text, fontSize:"0.85rem" }}>{d.label}</span>
+      <span style={{ color:d.color, fontWeight:600, fontSize:"0.75rem" }}>{d.status}</span>
+    </div>
+  ))}
+  <button onClick={() => setTab("identity")} style={{ marginTop:14, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>
+    → Vérifier mon identité
+  </button>
+</Card>
         </div>
       )}
 
