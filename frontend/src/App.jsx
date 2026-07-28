@@ -275,7 +275,7 @@ const AuthPage = ({ onLogin }) => {
 const handleRegister = async () => {
   if (!name || !email || !password) { setError("Remplissez tous les champs."); return; }
   if (password.length < 6) { setError("Mot de passe trop court."); return; }
-if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")} />;
+
   try {
     const [firstName, ...rest] = name.split(' ');
     const lastName = rest.join(' ') || '';
@@ -295,6 +295,8 @@ if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")
 };
 
   const demoLogin = (em) => { const user = USERS[em]; onLogin({ ...user, email: em }); };
+
+if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")} />;
 
   return (
     <div style={{ minHeight:"100vh", background:G.night, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
@@ -342,16 +344,15 @@ if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")
           {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
 
           {mode === "login"
-            ? <Btn onClick={handleLogin} variant="teal" size="lg" full>Se connecter →</Btn>
+  ? <Btn onClick={handleLogin} variant="teal" size="lg" full>Se connecter →</Btn>
+  : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full>Créer mon compte →</Btn>
+}
 
-           {mode === "login" && (
+{mode === "login" && (
   <button onClick={() => setMode("forgot")} style={{ marginTop:12, width:"100%", background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem", fontFamily:"'Inter',sans-serif", textDecoration:"underline" }}>
     Mot de passe oublié ?
   </button>
 )}
-
-            : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full>Créer mon compte →</Btn>
-          }
 
           {mode === "login" && (
             <div style={{ marginTop:24, paddingTop:20, borderTop:`1px solid ${G.border}` }}>
