@@ -15,6 +15,7 @@ app.use(express.json());
 
 app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/bookings', require('./routes/bookings'));
+app.use('/api/profile',  require('./routes/profile'));
 
 app.get('/api/test', (req, res) => {
   res.json({ message: '✅ Serveur BabyWatch fonctionne !' });

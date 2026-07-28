@@ -782,85 +782,323 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
 
 // ─── SITTER PROFILE ───────────────────────────────────────────
 const SitterProfile = ({ user, bookings, showToast }) => {
-  const me = SITTERS_LIST.find(s => s.id === user.id) || SITTERS_LIST[0];
-  const my = bookings.filter(b => b.sitterId === user.id && b.status==="completed");
-  const [avail, setAvail] = useState(true);
-  const [camAccept, setCamAccept] = useState(true);
+  const my = bookings.filter(b => b.sitterId === user.id && b.status === "completed");
+  const [tab, setTab] = useState("profile"); // profile | identity | stats
+  const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyStatus, setVerifyStatus] = useState("unverified");
+
+  // Champs du profil
+  const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
+  const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [bio, setBio] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("12");
+  const [skills, setSkills] = useState([]);
+  const [newSkill, setNewSkill] = useState("");
+  const [available, setAvailable] = useState(true);
+  const [acceptsCamera, setAcceptsCamera] = useState(true);
+
+  // Vérification identité
+  const [docType, setDocType] = useState("carte_identite");
+  const [docNumber, setDocNumber] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+
+  // Charger le profil
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/profile/sitter`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.first_name) setFirstName(data.first_name);
+      if (data.last_name) setLastName(data.last_name);
+      if (data.phone) setPhone(data.phone || "");
+      if (data.city) setCity(data.city || "");
+      if (data.bio) setBio(data.bio || "");
+      if (data.hourly_rate) setHourlyRate(String(data.hourly_rate));
+      if (data.skills) setSkills(data.skills || []);
+      if (data.available !== undefined) setAvailable(data.available);
+      if (data.accepts_camera !== undefined) setAcceptsCamera(data.accepts_camera);
+      if (data.verification_status) setVerifyStatus(data.verification_status);
+    })
+    .catch(console.error);
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/profile/sitter`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ firstName, lastName, phone, city, bio, hourlyRate: parseFloat(hourlyRate), skills, available, acceptsCamera })
+      });
+      const data = await res.json();
+      if (res.ok) showToast("✅ Profil mis à jour !", "ok");
+      else showToast("❌ " + data.error, "err");
+    } catch(e) {
+      showToast("❌ Erreur de connexion.", "err");
+    }
+    setSaving(false);
+  };
+
+  const handleVerifyIdentity = async () => {
+    if (!docNumber || !birthDate) { showToast("⚠️ Remplissez tous les champs.", "err"); return; }
+    setVerifying(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/profile/sitter/verify-identity`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ documentType: docType, documentNumber: docNumber, birthDate, firstName, lastName })
+      });
+      const data = await res.json();
+      if (res.ok) { showToast("✅ " + data.message, "ok"); setVerifyStatus("pending"); }
+      else showToast("❌ " + data.error, "err");
+    } catch(e) {
+      showToast("❌ Erreur de connexion.", "err");
+    }
+    setVerifying(false);
+  };
+
+  const addSkill = () => {
+    if (!newSkill.trim()) return;
+    setSkills(prev => [...prev, newSkill.trim()]);
+    setNewSkill("");
+  };
+
+  const removeSkill = (skill) => setSkills(prev => prev.filter(s => s !== skill));
+
+  const verifyBadge = () => {
+    if (verifyStatus === "verified") return <Badge color={G.green}>✅ Identité vérifiée</Badge>;
+    if (verifyStatus === "pending")  return <Badge color={G.amber}>⏳ Vérification en cours</Badge>;
+    return <Badge color={G.coral}>❌ Non vérifié</Badge>;
+  };
+
   return (
-    <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:20, alignItems:"start" }}>
-      <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-        <Card>
-          <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:20 }}>
-            <span style={{ fontSize:"3.5rem" }}>{user.avatar}</span>
-            <div>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff" }}>{user.name}</div>
-              <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:3 }}>📍 {me.city} · 🎂 {me.age} ans</div>
-              <div style={{ display:"flex", gap:6, marginTop:8 }}>
-                <Badge color={G.green}>⭐ {me.rating}</Badge>
-                <Badge color={G.purple}>{my.length} gardes</Badge>
-              </div>
-            </div>
-          </div>
-          <div style={{ marginBottom:14 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Bio</label>
-            <textarea defaultValue={me.bio} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:80 }} />
-          </div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Compétences</label>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-              {me.tags.map(t => <Badge key={t} color={G.purple}>{t}</Badge>)}
-            </div>
-          </div>
-          <Btn onClick={() => showToast("✅ Profil mis à jour !", "ok")} variant="amber">Sauvegarder</Btn>
-        </Card>
-        <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Préférences</div>
-          {[
-            { label:"Disponible pour nouvelles gardes", sub:"Votre profil apparaît dans les recherches", val:avail, set:setAvail, color:G.green },
-            { label:"J'accepte la surveillance caméra", sub:"Les parents peuvent activer le flux vidéo", val:camAccept, set:setCamAccept, color:G.teal },
-          ].map(opt => (
-            <div key={opt.label} onClick={() => { opt.set(!opt.val); showToast("Préférence mise à jour", "ok"); }} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", borderBottom:`1px solid ${G.border}`, cursor:"pointer" }}>
-              <div style={{ flex:1 }}>
-                <div style={{ fontWeight:600, color:G.text, fontSize:"0.88rem" }}>{opt.label}</div>
-                <div style={{ color:G.muted, fontSize:"0.75rem", marginTop:2 }}>{opt.sub}</div>
-              </div>
-              <div style={{ width:44, height:24, background:opt.val?opt.color:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
-                <div style={{ position:"absolute", top:3, left:opt.val?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
-              </div>
-            </div>
-          ))}
-        </Card>
+    <div>
+      {/* Header */}
+      <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:24 }}>
+        <span style={{ fontSize:"3rem" }}>{user.avatar}</span>
+        <div style={{ flex:1 }}>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>{firstName} {lastName}</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem", marginTop:4 }}>{user.email}</div>
+          <div style={{ marginTop:8 }}>{verifyBadge()}</div>
+        </div>
+        <Btn onClick={handleSave} variant="amber" disabled={saving}>
+          {saving ? "Sauvegarde…" : "💾 Sauvegarder"}
+        </Btn>
       </div>
-      <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-        <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Mes gains</div>
-          {[
-            ["Missions totales", my.length, G.amber],
-            ["Note moyenne", me.rating+" ⭐", G.green],
-            ["Tarif horaire", me.price+"€/h", G.purple],
-            ["Total gagné", my.reduce((s,b)=>s+b.price,0)+"€", G.teal],
-          ].map(([l,v,c]) => (
-            <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:`1px solid ${G.border}`, fontSize:"0.83rem" }}>
-              <span style={{ color:G.muted }}>{l}</span>
-              <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:c }}>{v}</span>
-            </div>
-          ))}
-        </Card>
-        <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Documents</div>
-          {[
-            ["🆔 Pièce d'identité", "Vérifiée ✓", G.green],
-            ["🚔 Casier judiciaire", "Vérifié ✓", G.green],
-            ["🏥 Premiers secours", "PSC1 · 2024", G.teal],
-            ["📋 Références", "3 vérifiées", G.teal],
-          ].map(([l,v,c]) => (
-            <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:`1px solid ${G.border}`, fontSize:"0.8rem" }}>
-              <span style={{ color:G.muted }}>{l}</span>
-              <span style={{ color:c, fontWeight:600, fontSize:"0.72rem" }}>{v}</span>
-            </div>
-          ))}
-        </Card>
+
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:6, marginBottom:24, borderBottom:`1px solid ${G.border}`, paddingBottom:0 }}>
+        {[["profile","👤 Mon profil"],["identity","🪪 Vérification identité"],["stats","📊 Mes statistiques"]].map(([id,label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{ padding:"10px 18px", background:"none", border:"none", borderBottom: tab===id?`2px solid ${G.amber}`:"2px solid transparent", color: tab===id?G.amber:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem", cursor:"pointer", marginBottom:"-1px" }}>
+            {label}
+          </button>
+        ))}
       </div>
+
+      {/* ── TAB PROFIL ── */}
+      {tab === "profile" && (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+          <Card>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Informations personnelles</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+              <Input label="Prénom" value={firstName} onChange={setFirstName} placeholder="Camille" />
+              <Input label="Nom" value={lastName} onChange={setLastName} placeholder="Bertrand" />
+            </div>
+            <Input label="Téléphone" value={phone} onChange={setPhone} placeholder="+33 6 12 34 56 78" icon="📱" />
+            <Input label="Ville" value={city} onChange={setCity} placeholder="Paris 11e" icon="📍" />
+            <Input label="Tarif horaire (€/h)" type="number" value={hourlyRate} onChange={setHourlyRate} placeholder="12" icon="💶" />
+          </Card>
+
+          <Card>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Bio & Compétences</div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Bio</label>
+              <textarea value={bio} onChange={e=>setBio(e.target.value)} placeholder="Décrivez votre expérience, vos qualités, ce qui vous distingue…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:100 }} />
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>Compétences</label>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
+                {skills.map(s => (
+                  <span key={s} style={{ display:"inline-flex", alignItems:"center", gap:5, background:G.purple+"22", color:G.purple, border:`1px solid ${G.purple}44`, borderRadius:100, padding:"3px 10px", fontSize:"0.75rem", fontWeight:600 }}>
+                    {s}
+                    <button onClick={() => removeSkill(s)} style={{ background:"none", border:"none", color:G.purple, cursor:"pointer", fontSize:"0.8rem", lineHeight:1 }}>×</button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display:"flex", gap:8 }}>
+                <input value={newSkill} onChange={e=>setNewSkill(e.target.value)} onKeyPress={e=>e.key==="Enter"&&addSkill()} placeholder="Ajouter une compétence…" style={{ flex:1, background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"8px 12px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.82rem", outline:"none" }} />
+                <Btn onClick={addSkill} variant="ghost" size="sm">+ Ajouter</Btn>
+              </div>
+            </div>
+          </Card>
+
+          <Card>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Préférences</div>
+            {[
+              { label:"Disponible pour nouvelles gardes", sub:"Votre profil apparaît dans les recherches", val:available, set:setAvailable, color:G.green },
+              { label:"J'accepte la surveillance caméra", sub:"Les parents peuvent activer le flux vidéo", val:acceptsCamera, set:setAcceptsCamera, color:G.teal },
+            ].map(opt => (
+              <div key={opt.label} onClick={() => opt.set(!opt.val)} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", borderBottom:`1px solid ${G.border}`, cursor:"pointer" }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:600, color:G.text, fontSize:"0.88rem" }}>{opt.label}</div>
+                  <div style={{ color:G.muted, fontSize:"0.75rem", marginTop:2 }}>{opt.sub}</div>
+                </div>
+                <div style={{ width:44, height:24, background:opt.val?opt.color:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
+                  <div style={{ position:"absolute", top:3, left:opt.val?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
+                </div>
+              </div>
+            ))}
+          </Card>
+
+          <Card>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Documents certifiés</div>
+            {[
+              { label:"🆔 Pièce d'identité", status: verifyStatus === "verified" ? "Vérifiée ✓" : "Non vérifiée", color: verifyStatus === "verified" ? G.green : G.coral },
+              { label:"🏥 Premiers secours", status:"À renseigner", color:G.muted },
+              { label:"🚔 Casier judiciaire", status:"À renseigner", color:G.muted },
+            ].map(([,doc]) => doc).map((_, i) => {
+              const docs = [
+                { label:"🆔 Pièce d'identité", status: verifyStatus === "verified" ? "Vérifiée ✓" : verifyStatus === "pending" ? "En cours…" : "Non vérifiée", color: verifyStatus === "verified" ? G.green : verifyStatus === "pending" ? G.amber : G.coral },
+                { label:"🏥 Premiers secours", status:"À renseigner", color:G.muted },
+                { label:"🚔 Casier judiciaire", status:"À renseigner", color:G.muted },
+              ];
+              const d = docs[i];
+              return (
+                <div key={d.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
+                  <span style={{ color:G.text, fontSize:"0.85rem" }}>{d.label}</span>
+                  <span style={{ color:d.color, fontWeight:600, fontSize:"0.75rem" }}>{d.status}</span>
+                </div>
+              );
+            })}
+            <button onClick={() => setTab("identity")} style={{ marginTop:14, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>
+              → Vérifier mon identité
+            </button>
+          </Card>
+        </div>
+      )}
+
+      {/* ── TAB IDENTITÉ ── */}
+      {tab === "identity" && (
+        <div style={{ maxWidth:600 }}>
+          {verifyStatus === "verified" && (
+            <Card style={{ borderColor:G.green+"44", marginBottom:20, textAlign:"center" }}>
+              <div style={{ fontSize:"2.5rem", marginBottom:12 }}>✅</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:"#fff", fontSize:"1.2rem", marginBottom:8 }}>Identité vérifiée</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem" }}>Votre identité a été vérifiée par notre équipe. Un badge apparaît sur votre profil.</div>
+            </Card>
+          )}
+
+          {verifyStatus === "pending" && (
+            <Card style={{ borderColor:G.amber+"44", marginBottom:20, textAlign:"center" }}>
+              <div style={{ fontSize:"2.5rem", marginBottom:12 }}>⏳</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:"#fff", fontSize:"1.2rem", marginBottom:8 }}>Vérification en cours</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem" }}>Notre équipe vérifie votre identité. Vous recevrez un email dans les 24-48 heures.</div>
+            </Card>
+          )}
+
+          {verifyStatus === "unverified" && (
+            <Card>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>🪪 Vérification d'identité</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20, lineHeight:1.6 }}>
+                La vérification d'identité renforce la confiance des parents. Un badge ✅ apparaîtra sur votre profil une fois vérifié.
+              </div>
+
+              <div style={{ background:G.teal+"11", border:`1px solid ${G.teal}33`, borderRadius:10, padding:14, marginBottom:20 }}>
+                <div style={{ fontSize:"0.82rem", color:G.muted, lineHeight:1.8 }}>
+                  📋 Ce dont vous avez besoin :<br/>
+                  • Carte nationale d'identité <strong style={{color:G.text}}>OU</strong> Passeport<br/>
+                  • Date de naissance<br/>
+                  • Les informations doivent correspondre à votre compte
+                </div>
+              </div>
+
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Type de document</label>
+                <select value={docType} onChange={e=>setDocType(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
+                  <option value="carte_identite">🪪 Carte nationale d'identité</option>
+                  <option value="passeport">📕 Passeport</option>
+                  <option value="titre_sejour">📄 Titre de séjour</option>
+                </select>
+              </div>
+
+              <Input label="Numéro du document" value={docNumber} onChange={setDocNumber} placeholder="Ex: 123456789" icon="🔢" />
+              <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} />
+
+              <div style={{ background:"rgba(251,191,36,0.08)", border:`1px solid ${G.amber}33`, borderRadius:10, padding:12, marginBottom:20, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
+                🔒 <strong style={{color:G.text}}>Confidentialité :</strong> Vos informations sont chiffrées et utilisées uniquement pour la vérification. Elles ne sont jamais partagées avec les parents.
+              </div>
+
+              <Btn onClick={handleVerifyIdentity} variant="teal" size="lg" full disabled={verifying}>
+                {verifying ? "Envoi en cours…" : "📤 Soumettre pour vérification →"}
+              </Btn>
+            </Card>
+          )}
+
+          <Card style={{ marginTop:16 }}>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Comment ça fonctionne ?</div>
+            {[
+              ["1️⃣", "Soumettez vos informations", "Remplissez le formulaire avec les infos de votre document d'identité"],
+              ["2️⃣", "Vérification par notre équipe", "Notre équipe vérifie vos informations sous 24-48h"],
+              ["3️⃣", "Badge ✅ sur votre profil", "Les parents voient que vous êtes vérifié et font plus confiance"],
+            ].map(([num, title, desc]) => (
+              <div key={title} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
+                <span style={{ fontSize:"1.2rem", flexShrink:0 }}>{num}</span>
+                <div>
+                  <div style={{ fontWeight:600, color:G.text, fontSize:"0.85rem" }}>{title}</div>
+                  <div style={{ color:G.muted, fontSize:"0.78rem", marginTop:2 }}>{desc}</div>
+                </div>
+              </div>
+            ))}
+          </Card>
+        </div>
+      )}
+
+      {/* ── TAB STATS ── */}
+      {tab === "stats" && (
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
+          {[
+            { icon:"✅", label:"Missions réalisées", val:my.length, color:G.green },
+            { icon:"💰", label:"Total gagné", val:my.reduce((s,b)=>s+b.price,0)+"€", color:G.teal },
+            { icon:"⭐", label:"Note moyenne", val:"4.9", color:G.amber },
+            { icon:"👶", label:"Enfants gardés", val:my.reduce((s,b)=>s+(b.children||1),0), color:G.purple },
+            { icon:"⏱", label:"Heures de garde", val:my.reduce((s,b)=>s+parseInt(b.duration||0),0)+"h", color:G.coral },
+            { icon:"📹", label:"Gardes avec caméra", val:my.filter(b=>b.camera).length, color:G.teal },
+          ].map(s => (
+            <Card key={s.label} style={{ textAlign:"center" }}>
+              <div style={{ fontSize:"2rem", marginBottom:8 }}>{s.icon}</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.8rem", color:s.color, marginBottom:4 }}>{s.val}</div>
+              <div style={{ fontSize:"0.75rem", color:G.muted }}>{s.label}</div>
+            </Card>
+          ))}
+
+          <Card style={{ gridColumn:"1 / -1" }}>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Dernières missions</div>
+            {my.length === 0 && <div style={{ color:G.muted, fontSize:"0.85rem" }}>Aucune mission terminée pour le moment.</div>}
+            {my.slice(0,5).map(b => (
+              <div key={b.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
+                <span style={{ fontSize:"1.5rem" }}>👨‍👧</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontWeight:600, fontSize:"0.85rem", color:G.text }}>{b.parentName}</div>
+                  <div style={{ color:G.muted, fontSize:"0.75rem" }}>{b.date} · {b.duration} · {b.children} enfant{b.children>1?"s":""}</div>
+                </div>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.teal }}>{b.price}€</div>
+                  {b.rating && <div style={{ color:G.amber, fontSize:"0.7rem" }}>{"⭐".repeat(b.rating)}</div>}
+                </div>
+              </div>
+            ))}
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
