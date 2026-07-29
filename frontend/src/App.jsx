@@ -941,6 +941,37 @@ const SitterProfile = ({ user, bookings, showToast }) => {
   const [docType, setDocType] = useState("carte_identite");
   const [docNumber, setDocNumber] = useState("");
   const [birthDate, setBirthDate] = useState("");
+  const [uploadedUrl, setUploadedUrl] = useState("");
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+const handleUploadId = async (file) => {
+  if (!file) return;
+  setUploadingDoc(true);
+  setUploadError("");
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('document', file);
+    const res = await fetch(`${API}/profile/sitter/upload-id`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setUploadedUrl(data.url);
+      setVerifyStatus("pending");
+      showToast("✅ " + data.message, "ok");
+    } else {
+      setUploadError(data.error);
+    }
+  } catch(e) {
+    setUploadError("Erreur de connexion.");
+  }
+  setUploadingDoc(false);
+};
+
 
   // Charger le profil
   useEffect(() => {
@@ -1165,6 +1196,56 @@ const SitterProfile = ({ user, bookings, showToast }) => {
               <div style={{ background:"rgba(251,191,36,0.08)", border:`1px solid ${G.amber}33`, borderRadius:10, padding:12, marginBottom:20, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
                 🔒 <strong style={{color:G.text}}>Confidentialité :</strong> Vos informations sont chiffrées et utilisées uniquement pour la vérification. Elles ne sont jamais partagées avec les parents.
               </div>
+
+{/* Instructions selon type de document */}
+<div style={{ background:G.card, borderRadius:8, padding:"10px 12px", marginBottom:16, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
+  {docType === "carte_identite" && "📋 Prenez une photo nette du recto de votre CNI. Assurez-vous que le nom, prénom et numéro sont lisibles."}
+  {docType === "passeport" && "📋 Photographiez la page principale de votre passeport avec votre photo et vos informations personnelles."}
+  {docType === "titre_sejour" && "📋 Prenez une photo nette du recto de votre titre de séjour en cours de validité."}
+</div>
+
+{/* Zone upload */}
+<div style={{ marginBottom:20 }}>
+  <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>
+    📷 Photo de votre {
+      docType === "carte_identite" ? "Carte Nationale d'Identité (recto)" :
+      docType === "passeport" ? "Passeport (page principale)" :
+      "Titre de séjour (recto)"
+    }
+  </label>
+  <div style={{ border:`2px dashed ${G.border}`, borderRadius:12, padding:20, textAlign:"center", cursor:"pointer", background:"rgba(255,255,255,0.02)", position:"relative" }}
+    onDragOver={e => e.preventDefault()}
+    onDrop={e => { e.preventDefault(); handleUploadId(e.dataTransfer.files[0]); }}>
+    <input type="file" accept="image/*" onChange={e => handleUploadId(e.target.files[0])} style={{ position:"absolute", inset:0, opacity:0, cursor:"pointer" }} />
+    {uploadedUrl ? (
+      <div>
+        <div style={{ fontSize:"2rem", marginBottom:8 }}>✅</div>
+        <div style={{ color:G.green, fontWeight:600, fontSize:"0.85rem" }}>Document uploadé !</div>
+        <div style={{ color:G.muted, fontSize:"0.72rem", marginTop:4 }}>Cliquez pour changer</div>
+      </div>
+    ) : uploadingDoc ? (
+      <div>
+        <div style={{ fontSize:"1.5rem", marginBottom:8 }}>⏳</div>
+        <div style={{ color:G.muted, fontSize:"0.85rem" }}>Upload en cours…</div>
+      </div>
+    ) : (
+      <div>
+        <div style={{ fontSize:"2.5rem", marginBottom:8, opacity:0.4 }}>
+          {docType === "carte_identite" ? "🪪" : docType === "passeport" ? "📕" : "📄"}
+        </div>
+        <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:4 }}>
+          Glissez votre {
+            docType === "carte_identite" ? "CNI" :
+            docType === "passeport" ? "passeport" :
+            "titre de séjour"
+          } ici
+        </div>
+        <div style={{ color:G.muted, fontSize:"0.72rem" }}>ou cliquez pour sélectionner · JPG, PNG · Max 5MB</div>
+      </div>
+    )}
+  </div>
+  {uploadError && <div style={{ color:G.coral, fontSize:"0.78rem", marginTop:8 }}>⚠️ {uploadError}</div>}
+</div>
 
               <Btn onClick={handleVerifyIdentity} variant="teal" size="lg" full disabled={verifying}>
                 {verifying ? "Envoi en cours…" : "📤 Soumettre pour vérification →"}
