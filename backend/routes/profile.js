@@ -102,4 +102,36 @@ router.post('/sitter/verify-identity', auth, async (req, res) => {
   }
 });
 
+// POST — Upload photo d'identité
+router.post('/sitter/upload-id', auth, async (req, res) => {
+  try {
+    const { upload, uploadToCloudinary } = require('../services/upload');
+    
+    upload.single('document')(req, res, async (err) => {
+      if (err) return res.status(400).json({ error: err.message });
+      if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu.' });
+
+      const result = await uploadToCloudinary(req.file.buffer, 'babywatch/identity');
+
+      await pool.query(
+        `UPDATE sitter_profiles SET 
+          id_document_url = $1,
+          verification_status = 'pending',
+          verification_submitted_at = NOW()
+         WHERE user_id = $2`,
+        [result.secure_url, req.userId]
+      );
+
+      res.json({
+        success: true,
+        url: result.secure_url,
+        message: 'Document uploadé ! Vérification en cours sous 24-48h.'
+      });
+    });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || 'Erreur serveur.' });
+  }
+});
+
 module.exports = router;
