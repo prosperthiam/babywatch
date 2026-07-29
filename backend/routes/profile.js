@@ -134,4 +134,83 @@ router.post('/sitter/upload-id', auth, async (req, res) => {
   }
 });
 
+// GET profil parent
+router.get('/parent', auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT first_name, last_name, email, phone, address, 
+              postal_code, city, country, birth_date, birth_place,
+              latitude, longitude
+       FROM users WHERE id = $1`,
+      [req.userId]
+    );
+    res.json(result.rows[0]);
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// PUT mettre à jour profil parent
+router.put('/parent', auth, async (req, res) => {
+  const { firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, latitude, longitude } = req.body;
+  try {
+    await pool.query(
+      `UPDATE users SET 
+        first_name=$1, last_name=$2, phone=$3, address=$4,
+        postal_code=$5, city=$6, country=$7, birth_date=$8,
+        birth_place=$9, latitude=$10, longitude=$11
+       WHERE id=$12`,
+      [firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, latitude, longitude, req.userId]
+    );
+    res.json({ success: true, message: 'Profil mis à jour !' });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// GET tous les babysitters avec position (pour la map)
+router.get('/sitters/map', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT u.id, u.first_name, u.last_name, u.city, u.latitude, u.longitude,
+              sp.bio, sp.hourly_rate, sp.rating, sp.total_missions,
+              sp.available, sp.accepts_camera, sp.skills, sp.verification_status
+       FROM users u
+       JOIN sitter_profiles sp ON sp.user_id = u.id
+       WHERE u.role = 'sitter' AND sp.available = true
+       ORDER BY sp.rating DESC`
+    );
+    res.json(result.rows);
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// PUT mettre à jour profil sitter (version complète)
+router.put('/sitter/complete', auth, async (req, res) => {
+  const { firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, latitude, longitude, bio, hourlyRate, skills, available, acceptsCamera } = req.body;
+  try {
+    await pool.query(
+      `UPDATE users SET 
+        first_name=$1, last_name=$2, phone=$3, address=$4,
+        postal_code=$5, city=$6, country=$7, birth_date=$8,
+        birth_place=$9, latitude=$10, longitude=$11
+       WHERE id=$12`,
+      [firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, latitude, longitude, req.userId]
+    );
+    await pool.query(
+      `UPDATE sitter_profiles SET bio=$1, hourly_rate=$2, skills=$3, available=$4, accepts_camera=$5
+       WHERE user_id=$6`,
+      [bio, hourlyRate, skills, available, acceptsCamera, req.userId]
+    );
+    res.json({ success: true, message: 'Profil mis à jour !' });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
 module.exports = router;

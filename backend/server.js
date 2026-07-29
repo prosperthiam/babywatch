@@ -15,7 +15,7 @@ app.use(express.json());
 
 app.use('/api/auth',     require('./routes/auth'));
 app.use('/api/bookings', require('./routes/bookings'));
-app.use('/api/profile',  require('./routes/profile'));
+app.use('/api/profile', require('./routes/profile'));
 app.use('/api/reviews', require('./routes/reviews'));
 app.use('/api/admin', require('./routes/admin'));
 
