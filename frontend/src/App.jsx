@@ -952,7 +952,7 @@ const handleUploadId = async (file) => {
   try {
     const token = localStorage.getItem('token');
     const formData = new FormData();
-    formData.append('document', file);
+    formData.append('document', file);cd C:\Users\prosp\babywatch
     const res = await fetch(`${API}/profile/sitter/upload-id`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
@@ -1398,6 +1398,249 @@ const CameraPage = ({ user }) => {
   );
 };
 
+// ─── ADMIN DASHBOARD ──────────────────────────────────────────
+const AdminDashboard = ({ user, onLogout }) => {
+  const [tab, setTab] = useState("verifications");
+  const [stats, setStats] = useState(null);
+  const [verifications, setVerifications] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [toast, showToast] = useToast();
+
+  const token = localStorage.getItem('token');
+  const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  useEffect(() => {
+    fetch(`${API}/admin/stats`, { headers }).then(r=>r.json()).then(setStats);
+    fetch(`${API}/admin/verifications`, { headers }).then(r=>r.json()).then(setVerifications);
+    fetch(`${API}/admin/users`, { headers }).then(r=>r.json()).then(setUsers);
+    fetch(`${API}/admin/bookings`, { headers }).then(r=>r.json()).then(data => setBookings(Array.isArray(data) ? data : []));
+  }, []);
+
+  const approve = async (userId) => {
+    const res = await fetch(`${API}/admin/verify/${userId}/approve`, { method:'POST', headers });
+    const data = await res.json();
+    if (res.ok) {
+      showToast("✅ " + data.message, "ok");
+      setVerifications(prev => prev.map(v => v.id===userId ? {...v, verification_status:"verified"} : v));
+    } else showToast("❌ " + data.error, "err");
+  };
+
+  const reject = async () => {
+    if (!rejectReason.trim()) { showToast("⚠️ Entrez une raison.", "err"); return; }
+    const res = await fetch(`${API}/admin/verify/${rejectModal}/reject`, { method:'POST', headers, body: JSON.stringify({ reason: rejectReason }) });
+    const data = await res.json();
+    if (res.ok) {
+      showToast("❌ " + data.message, "ok");
+      setVerifications(prev => prev.map(v => v.id===rejectModal ? {...v, verification_status:"rejected"} : v));
+      setRejectModal(null); setRejectReason("");
+    } else showToast("❌ " + data.error, "err");
+  };
+
+  const verifBadge = (status) => {
+    if (status === "verified") return <Badge color={G.green}>✅ Vérifié</Badge>;
+    if (status === "pending")  return <Badge color={G.amber}>⏳ En attente</Badge>;
+    if (status === "rejected") return <Badge color={G.coral}>❌ Rejeté</Badge>;
+    return <Badge color={G.muted}>— Non soumis</Badge>;
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:G.night }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600&display=swap'); *{box-sizing:border-box;margin:0;padding:0} body{font-family:'Inter',sans-serif;background:#0f1923;color:#e2e8f0} ::-webkit-scrollbar{width:5px} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px} select option{background:#162030}`}</style>
+
+      {/* Nav Admin */}
+      <nav style={{ background:G.panel, borderBottom:`1px solid ${G.border}`, padding:"0 28px", height:64, display:"flex", alignItems:"center", justifyContent:"space-between", position:"sticky", top:0, zIndex:100 }}>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.25rem", color:"#fff" }}>
+          🍼 Baby<span style={{ color:G.coral }}>Watch</span>
+          <span style={{ marginLeft:10, background:G.coral+"22", color:G.coral, fontSize:"0.7rem", padding:"2px 10px", borderRadius:100, fontFamily:"'Inter',sans-serif", fontWeight:700 }}>⚡ ADMIN</span>
+        </div>
+        <div style={{ display:"flex", gap:4 }}>
+          {[["verifications","🪪 Vérifications"],["users","👥 Utilisateurs"],["bookings","📋 Réservations"]].map(([id,label]) => (
+            <button key={id} onClick={() => setTab(id)} style={{ padding:"7px 14px", borderRadius:8, border:"none", background:tab===id?G.coral+"22":"transparent", color:tab===id?G.coral:G.muted, fontFamily:"'Inter',sans-serif", fontWeight:tab===id?600:400, fontSize:"0.85rem", cursor:"pointer" }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ color:G.muted, fontSize:"0.82rem" }}>👤 {user.name}</span>
+          <button onClick={onLogout} style={{ background:"rgba(255,95,87,0.12)", border:"1px solid rgba(255,95,87,0.25)", color:G.coral, padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:"0.78rem", fontWeight:600 }}>Déconnexion</button>
+        </div>
+      </nav>
+
+      <div style={{ maxWidth:1200, margin:"0 auto", padding:"32px 24px" }}>
+
+        {/* Stats */}
+        {stats && (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:28 }}>
+            {[
+              { icon:"👥", label:"Utilisateurs", val:stats.totalUsers, color:G.teal },
+              { icon:"👩", label:"Babysitters", val:stats.totalSitters, color:G.amber },
+              { icon:"📋", label:"Réservations", val:stats.totalBookings, color:G.purple },
+              { icon:"⏳", label:"Vérifications en attente", val:stats.pendingVerif, color:G.coral },
+            ].map(s => (
+              <Card key={s.label}>
+                <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                  <span style={{ fontSize:"1.8rem" }}>{s.icon}</span>
+                  <div>
+                    <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.6rem", color:s.color }}>{s.val}</div>
+                    <div style={{ fontSize:"0.72rem", color:G.muted }}>{s.label}</div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* ── TAB VÉRIFICATIONS ── */}
+        {tab === "verifications" && (
+          <div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:16 }}>
+              🪪 Vérifications d'identité
+            </div>
+            {verifications.length === 0 && (
+              <Card style={{ textAlign:"center", padding:40 }}>
+                <div style={{ fontSize:"2.5rem", marginBottom:12 }}>✅</div>
+                <div style={{ color:G.muted }}>Aucune vérification en attente.</div>
+              </Card>
+            )}
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              {verifications.map(v => (
+                <Card key={v.id}>
+                  <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
+
+                    {/* Photo du document */}
+                    {v.id_document_url ? (
+                      <a href={v.id_document_url} target="_blank" rel="noreferrer">
+                        <img src={v.id_document_url} alt="Document" style={{ width:120, height:80, objectFit:"cover", borderRadius:8, border:`1px solid ${G.border}`, flexShrink:0 }} />
+                      </a>
+                    ) : (
+                      <div style={{ width:120, height:80, background:G.night, borderRadius:8, border:`1px solid ${G.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        <span style={{ color:G.muted, fontSize:"0.72rem", textAlign:"center" }}>Pas de<br/>document</span>
+                      </div>
+                    )}
+
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6, flexWrap:"wrap" }}>
+                        <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"1rem" }}>{v.first_name} {v.last_name}</span>
+                        {verifBadge(v.verification_status)}
+                      </div>
+                      <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:4 }}>✉️ {v.email}</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,auto)", gap:"4px 16px", fontSize:"0.78rem", color:G.muted }}>
+                        <span>📄 {v.id_document_type?.replace("_"," ") || "—"}</span>
+                        <span>⭐ {v.rating || "—"}</span>
+                        <span>✅ {v.total_missions || 0} missions</span>
+                        <span>📅 Soumis le {v.verification_submitted_at ? new Date(v.verification_submitted_at).toLocaleDateString('fr-FR') : "—"}</span>
+                        <span>🗓 Inscrit le {new Date(v.created_at).toLocaleDateString('fr-FR')}</span>
+                      </div>
+                    </div>
+
+                    {v.verification_status === "pending" && (
+                      <div style={{ display:"flex", flexDirection:"column", gap:8, flexShrink:0 }}>
+                        <Btn onClick={() => approve(v.id)} variant="teal" size="sm">✅ Approuver</Btn>
+                        <Btn onClick={() => setRejectModal(v.id)} variant="danger" size="sm">❌ Rejeter</Btn>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB UTILISATEURS ── */}
+        {tab === "users" && (
+          <div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:16 }}>
+              👥 Tous les utilisateurs
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {users.map(u => (
+                <Card key={u.id}>
+                  <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                    <span style={{ fontSize:"1.8rem" }}>{u.role === "parent" ? "👨‍👧" : "👩"}</span>
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                        <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{u.first_name} {u.last_name}</span>
+                        <Badge color={u.role==="parent"?G.teal:G.amber}>{u.role}</Badge>
+                        {u.verified ? <Badge color={G.green}>✅ Email vérifié</Badge> : <Badge color={G.coral}>❌ Non vérifié</Badge>}
+                        {u.role==="sitter" && verifBadge(u.verification_status)}
+                      </div>
+                      <div style={{ color:G.muted, fontSize:"0.78rem" }}>✉️ {u.email} · 🗓 {new Date(u.created_at).toLocaleDateString('fr-FR')}</div>
+                    </div>
+                    {u.role === "sitter" && (
+                      <div style={{ textAlign:"right", fontSize:"0.78rem", color:G.muted }}>
+                        <div>⭐ {u.rating || "—"}</div>
+                        <div>{u.total_missions || 0} missions</div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB RÉSERVATIONS ── */}
+        {tab === "bookings" && (
+          <div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:16 }}>
+              📋 Toutes les réservations
+            </div>
+            {bookings.length === 0 && (
+              <Card style={{ textAlign:"center", padding:40 }}>
+                <div style={{ color:G.muted }}>Aucune réservation pour le moment.</div>
+              </Card>
+            )}
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              {bookings.map(b => (
+                <Card key={b.id}>
+                  <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4, flexWrap:"wrap" }}>
+                        <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{b.parent_name}</span>
+                        <span style={{ color:G.muted }}>→</span>
+                        <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:700, color:G.teal }}>{b.sitter_name}</span>
+                        <StatusBadge status={b.status} />
+                        {b.camera && <Badge color={G.teal}>📹 Caméra</Badge>}
+                      </div>
+                      <div style={{ color:G.muted, fontSize:"0.78rem" }}>
+                        📅 {b.date} à {b.time_start} · ⏱ {b.duration}h · 👶 {b.children} enfant{b.children>1?"s":""} · 📍 {b.address}
+                      </div>
+                    </div>
+                    <div style={{ textAlign:"right" }}>
+                      <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:G.teal, fontSize:"1.1rem" }}>{b.price}€</div>
+                      {b.rating && <div style={{ color:G.amber, fontSize:"0.75rem" }}>{"⭐".repeat(b.rating)}</div>}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Modal rejet */}
+      {rejectModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", zIndex:200, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <Card style={{ maxWidth:440, width:"100%" }}>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:"#fff", fontSize:"1.1rem", marginBottom:16 }}>❌ Raison du rejet</div>
+            <textarea value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="Ex: Document illisible, photo floue, document expiré…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:80, marginBottom:16 }} />
+            <div style={{ display:"flex", gap:10 }}>
+              <Btn onClick={() => { setRejectModal(null); setRejectReason(""); }} variant="ghost" full>Annuler</Btn>
+              <Btn onClick={reject} variant="danger" full>❌ Confirmer le rejet</Btn>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      <Toast toast={toast} />
+    </div>
+  );
+};
+
 // ─── MAIN APP ─────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(null);
@@ -1433,6 +1676,11 @@ const addReview = (id, rating, review) => {
   const cancelBooking  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Réservation annulée.", "err"); };
   const acceptMission  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"confirmed"} : b)); showToast("✅ Mission acceptée !", "ok"); };
   const declineMission = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Mission refusée.", "err"); };
+
+  // ── PAGE ADMIN ──
+  if (user?.role === "admin") return (
+    <AdminDashboard user={user} onLogout={handleLogout} />
+  );
 
   if (!user) return (
     <>
