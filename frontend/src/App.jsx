@@ -952,7 +952,7 @@ const handleUploadId = async (file) => {
   try {
     const token = localStorage.getItem('token');
     const formData = new FormData();
-    formData.append('document', file);cd C:\Users\prosp\babywatch
+    formData.append('document', file);
     const res = await fetch(`${API}/profile/sitter/upload-id`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${token}` },
