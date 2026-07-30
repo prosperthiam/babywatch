@@ -401,18 +401,17 @@ const Nav = ({ user, activePage, onNav, onLogout }) => {
   const isParent = user.role === "parent";
   const navItems = isParent
   ? [
-      { id:"home",    label:"Accueil",    icon:"🏠" },
-      { id:"search",  label:"Babysitters", icon:"🔍" },
-      { id:"map",     label:"Carte",       icon:"🗺️" },
-      { id:"bookings",label:"Mes gardes",  icon:"📋" },
-      { id:"profile", label:"Mon profil",  icon:"👤" },
-      { id:"camera",  label:"Caméra live", icon:"📹" },
-    ]
-  : [
+    
       { id:"home",     label:"Accueil",     icon:"🏠" },
       { id:"missions", label:"Mes missions", icon:"📋" },
       { id:"profile",  label:"Mon profil",   icon:"👤" },
       { id:"camera",   label:"Flux caméra",  icon:"📹" },
+     { id:"search",  label:"Babysitters", icon:"🔍" },
+      { id:"map",     label:"Carte",       icon:"🗺️" },
+      { id:"bookings",label:"Mes gardes",  icon:"📋" },
+      { id:"camera",  label:"Caméra live", icon:"📹" },
+    ]
+  : [
     ];
   return (
     <nav style={{ position:"fixed", top:0, left:0, right:0, height:G.navH, background:G.panel, borderBottom:`1px solid ${G.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", zIndex:100, boxShadow:"0 2px 20px #0005" }}>
@@ -507,6 +506,93 @@ const ParentHome = ({ user, bookings, onNav }) => {
         ))}
         <button onClick={() => onNav("bookings")} style={{ marginTop:12, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>Voir tout →</button>
       </Card>
+    </div>
+  );
+};
+
+// ─── PARENT PROFILE ───────────────────────────────────────────
+const ParentProfile = ({ user, showToast }) => {
+  const [saving, setSaving] = useState(false);
+  const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
+  const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("France");
+  const [birthDate, setBirthDate] = useState("");
+  const [birthPlace, setBirthPlace] = useState("");
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/profile/parent`, { headers:{'Authorization':`Bearer ${token}`} })
+      .then(r => r.json())
+      .then(data => {
+        if (data.first_name) setFirstName(data.first_name);
+        if (data.last_name) setLastName(data.last_name);
+        if (data.phone) setPhone(data.phone || "");
+        if (data.address) setAddress(data.address || "");
+        if (data.postal_code) setPostalCode(data.postal_code || "");
+        if (data.city) setCity(data.city || "");
+        if (data.country) setCountry(data.country || "France");
+        if (data.birth_date) setBirthDate(data.birth_date?.slice(0,10) || "");
+        if (data.birth_place) setBirthPlace(data.birth_place || "");
+      }).catch(console.error);
+  }, []);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/profile/parent`, {
+        method:'PUT', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+        body:JSON.stringify({ firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace })
+      });
+      const data = await res.json();
+      if (res.ok) showToast("✅ Profil mis à jour !", "ok");
+      else showToast("❌ " + data.error, "err");
+    } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
+    setSaving(false);
+  };
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
+        <div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>👤 Mon profil</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem" }}>Gérez vos informations personnelles</div>
+        </div>
+        <Btn onClick={handleSave} variant="teal" disabled={saving}>{saving?"Sauvegarde…":"💾 Sauvegarder"}</Btn>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+        <Card>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>👤 Informations personnelles</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <Input label="Prénom" value={firstName} onChange={setFirstName} placeholder="Sophie" />
+            <Input label="Nom" value={lastName} onChange={setLastName} placeholder="Dupont" />
+          </div>
+          <Input label="Téléphone" value={phone} onChange={setPhone} placeholder="+33 6 12 34 56 78" icon="📱" />
+          <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
+          <Input label="Lieu de naissance" value={birthPlace} onChange={setBirthPlace} placeholder="Paris, France" icon="📍" />
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Pays</label>
+            <select value={country} onChange={e=>setCountry(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
+              {["France","Belgique","Suisse","Canada","Maroc","Sénégal","Côte d'Ivoire","Algérie","Tunisie","Autre"].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </Card>
+        <Card>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>🏠 Adresse complète</div>
+          <Input label="Adresse" value={address} onChange={setAddress} placeholder="12 rue de la Paix" icon="🏠" />
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:12 }}>
+            <Input label="Code postal" value={postalCode} onChange={setPostalCode} placeholder="75001" />
+            <Input label="Ville" value={city} onChange={setCity} placeholder="Paris" icon="📍" />
+          </div>
+          <div style={{ background:G.teal+"11", border:`1px solid ${G.teal}33`, borderRadius:10, padding:14, marginTop:8 }}>
+            <div style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.7 }}>
+              📍 Votre adresse est utilisée pour trouver les babysitters les plus proches. Elle n'est jamais partagée publiquement.
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };
@@ -936,28 +1022,17 @@ const SitterProfile = ({ user, bookings, showToast }) => {
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState("unverified");
-  const [address, setAddress] = useState("");
-const [postalCode, setPostalCode] = useState("");
-const [country, setCountry] = useState("France");
-const [birthDate, setBirthDate] = useState("");
-const [birthPlace, setBirthPlace] = useState("");
-  const geocodeAddress = async (address, city, postalCode) => {
-  try {
-    const query = `${address} ${postalCode} ${city} France`;
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
-    const data = await res.json();
-    if (data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    }
-  } catch(e) { console.error(e); }
-  return null;
-};
-
+  
   // Champs du profil
   const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
   const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
+   const [address, setAddress] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [country, setCountry] = useState("France");
+  const [birthDate, setBirthDate] = useState("");
+  const [birthPlace, setBirthPlace] = useState("");
   const [bio, setBio] = useState("");
   const [hourlyRate, setHourlyRate] = useState("12");
   const [skills, setSkills] = useState([]);
@@ -968,10 +1043,18 @@ const [birthPlace, setBirthPlace] = useState("");
   // Vérification identité
   const [docType, setDocType] = useState("carte_identite");
   const [docNumber, setDocNumber] = useState("");
-  const [birthDate, setBirthDate] = useState("");
   const [uploadedUrl, setUploadedUrl] = useState("");
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const geocodeAddress = async (addr, cty, postal) => {
+  if (!file) return;
+  setUploadingDoc(true);
+  setUploadError("");}
+  try {
+     const token = localStorage.getItem('token');
+      const query = `${addr} ${postal} ${cty} France`;
+    const formData = new FormData();
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`)
 
 const handleUploadId = async (file) => {
   if (!file) return;
@@ -1121,20 +1204,22 @@ const handleUploadId = async (file) => {
             </div>
             <Input label="Téléphone" value={phone} onChange={setPhone} placeholder="+33 6 12 34 56 78" icon="📱" />
             <Input label="Ville" value={city} onChange={setCity} placeholder="Paris 11e" icon="📍" />
-            <Input label="Tarif horaire (€/h)" type="number" value={hourlyRate} onChange={setHourlyRate} placeholder="12" icon="💶" />
-          <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
-<Input label="Lieu de naissance" value={birthPlace} onChange={setBirthPlace} placeholder="Paris, France" icon="📍" />
-<Input label="Adresse" value={address} onChange={setAddress} placeholder="12 rue de la Paix" icon="🏠" />
-<div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:12 }}>
-  <Input label="Code postal" value={postalCode} onChange={setPostalCode} placeholder="75011" />
-  <Input label="Ville" value={city} onChange={setCity} placeholder="Paris" />
-</div>
-<div style={{ marginBottom:16 }}>
-  <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Pays</label>
-  <select value={country} onChange={e=>setCountry(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
-    {["France","Belgique","Suisse","Canada","Maroc","Sénégal","Côte d'Ivoire","Algérie","Tunisie","Autre"].map(c => <option key={c} value={c}>{c}</option>)}
-  </select>
-</div>
+            <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
+            <Input label="Lieu de naissance" value={birthPlace} onChange={setBirthPlace} placeholder="Paris, France" icon="📍" />
+            <Input label="Adresse" value={address} onChange={setAddress} placeholder="12 rue de la Paix" icon="🏠" />
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:12 }}>
+              <Input label="Code postal" value={postalCode} onChange={setPostalCode} placeholder="75011" />
+            <Input label="Ville" value={city} onChange={setCity} placeholder="Paris 11e" icon="📍" />
+              <Input label="Ville" value={city} onChange={setCity} placeholder="Paris" />
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Pays</label>
+              <select value={country} onChange={e=>setCountry(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
+                {["France","Belgique","Suisse","Canada","Maroc","Sénégal","Côte d'Ivoire","Algérie","Tunisie","Autre"].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+           <Input label="Tarif horaire (€/h)" type="number" value={hourlyRate} onChange={setHourlyRate} placeholder="12" icon="💶" />
+         
           </Card>
 
           <Card>
@@ -1241,10 +1326,44 @@ const handleUploadId = async (file) => {
                   <option value="titre_sejour">📄 Titre de séjour</option>
                 </select>
               </div>
-
-              <Input label="Numéro du document" value={docNumber} onChange={setDocNumber} placeholder="Ex: 123456789" icon="🔢" />
+                          <div style={{ background:G.card, borderRadius:8, padding:"10px 12px", marginBottom:16, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
+                {docType==="carte_identite" && "📋 Prenez une photo nette du recto de votre CNI. Assurez-vous que le nom, prénom et numéro sont lisibles."}
+                {docType==="passeport" && "📋 Photographiez la page principale de votre passeport avec votre photo et vos informations personnelles."}
+                {docType==="titre_sejour" && "📋 Prenez une photo nette du recto de votre titre de séjour en cours de validité."}
+              </div>
+             <Input label="Numéro du document" value={docNumber} onChange={setDocNumber} placeholder="Ex: 123456789" icon="🔢" />
               <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} />
-
+           <div style={{ marginBottom:20 }}>
+                <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>
+                  📷 Photo de votre {docType==="carte_identite"?"Carte Nationale d'Identité (recto)":docType==="passeport"?"Passeport (page principale)":"Titre de séjour (recto)"}
+                </label>
+                <div style={{ border:`2px dashed ${G.border}`, borderRadius:12, padding:20, textAlign:"center", cursor:"pointer", background:"rgba(255,255,255,0.02)", position:"relative" }}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => { e.preventDefault(); handleUploadId(e.dataTransfer.files[0]); }}>
+                  <input type="file" accept="image/*" onChange={e => handleUploadId(e.target.files[0])} style={{ position:"absolute", inset:0, opacity:0, cursor:"pointer" }} />
+                  {uploadedUrl ? (
+                    <div>
+                      <div style={{ fontSize:"2rem", marginBottom:8 }}>✅</div>
+                      <div style={{ color:G.green, fontWeight:600, fontSize:"0.85rem" }}>Document uploadé !</div>
+                      <div style={{ color:G.muted, fontSize:"0.72rem", marginTop:4 }}>Cliquez pour changer</div>
+                    </div>
+                  ) : uploadingDoc ? (
+                    <div>
+                      <div style={{ fontSize:"1.5rem", marginBottom:8 }}>⏳</div>
+                      <div style={{ color:G.muted, fontSize:"0.85rem" }}>Upload en cours…</div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize:"2.5rem", marginBottom:8, opacity:0.4 }}>{docType==="carte_identite"?"🪪":docType==="passeport"?"📕":"📄"}</div>
+                      <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:4 }}>
+                        Glissez votre {docType==="carte_identite"?"CNI":docType==="passeport"?"passeport":"titre de séjour"} ici
+                      </div>
+                      <div style={{ color:G.muted, fontSize:"0.72rem" }}>ou cliquez pour sélectionner · JPG, PNG · Max 5MB</div>
+                    </div>
+                  )}
+                </div>
+                {uploadError && <div style={{ color:G.coral, fontSize:"0.78rem", marginTop:8 }}>⚠️ {uploadError}</div>}
+              </div>
               <div style={{ background:"rgba(251,191,36,0.08)", border:`1px solid ${G.amber}33`, borderRadius:10, padding:12, marginBottom:20, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
                 🔒 <strong style={{color:G.text}}>Confidentialité :</strong> Vos informations sont chiffrées et utilisées uniquement pour la vérification. Elles ne sont jamais partagées avec les parents.
               </div>
@@ -1445,6 +1564,137 @@ const CameraPage = ({ user }) => {
           <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:10 }}>🔒 Confidentialité</div>
           <div style={{ color:G.muted, fontSize:"0.78rem", lineHeight:1.7 }}>Flux pair-à-pair uniquement. <strong style={{ color:G.text }}>Aucune vidéo ne passe par nos serveurs.</strong></div>
         </Card>
+      </div>
+    </div>
+  );
+};
+
+// ─── MAP VIEW ─────────────────────────────────────────────────
+const MapView = ({ user, showToast }) => {
+  const [sitters, setSitters] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [userLat, setUserLat] = useState(48.8566);
+  const [userLng, setUserLng] = useState(2.3522);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [maxDist, setMaxDist] = useState(10);
+  const mapRef = useRef(null);
+  const mapInstance = useRef(null);
+  const distance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371;
+    const dLat = (lat2-lat1) * Math.PI/180;
+    const dLon = (lon2-lon1) * Math.PI/180;
+    const a = Math.sin(dLat/2)*Math.sin(dLat/2) + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  };
+  useEffect(() => {
+    fetch(`${API}/profile/sitters/map`)
+      .then(r => r.json())
+      .then(data => { setSitters(Array.isArray(data)?data:[]); setLoading(false); })
+      .catch(() => setLoading(false));
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        pos => { setUserLat(pos.coords.latitude); setUserLng(pos.coords.longitude); },
+        () => {}
+      );
+    }
+  }, []);
+  useEffect(() => {
+    if (loading || !mapRef.current) return;
+    const initMap = () => {
+      if (!window.L || !mapRef.current) return;
+      if (mapInstance.current) { mapInstance.current.remove(); }
+      const map = window.L.map(mapRef.current).setView([userLat, userLng], 13);
+      mapInstance.current = map;
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(map);
+      const userIcon = window.L.divIcon({ html:`<div style="background:#2dd4bf;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`, iconSize:[16,16], iconAnchor:[8,8], className:'' });
+      window.L.marker([userLat, userLng], { icon:userIcon }).addTo(map).bindPopup('<strong>📍 Vous êtes ici</strong>');
+      sitters.forEach(s => {
+        if (!s.latitude || !s.longitude) return;
+        const dist = distance(userLat, userLng, parseFloat(s.latitude), parseFloat(s.longitude));
+        const sitterIcon = window.L.divIcon({ html:`<div style="background:${s.verification_status==='verified'?'#fbbf24':'#a78bfa'};width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:1.2rem">👩</div>`, iconSize:[36,36], iconAnchor:[18,18], className:'' });
+        window.L.marker([parseFloat(s.latitude), parseFloat(s.longitude)], { icon:sitterIcon })
+          .addTo(map)
+          .bindPopup(`<div style="font-family:Arial,sans-serif;min-width:180px"><strong>${s.first_name} ${s.last_name}</strong><br/><span style="color:#666;font-size:0.8rem">📍 ${s.city||'N/A'} · ${dist.toFixed(1)} km</span><br/><span style="font-size:0.8rem">⭐ ${s.rating||'—'} · ${s.hourly_rate||'—'}€/h</span>${s.verification_status==='verified'?'<br/><span style="color:#22c55e;font-size:0.75rem">✅ Identité vérifiée</span>':''}</div>`)
+          .on('click', () => setSelected({ ...s, dist:dist.toFixed(1) }));
+      });
+    };
+    if (!window.L) {
+      const link = document.createElement('link'); link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
+      const script = document.createElement('script'); script.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; script.onload=()=>initMap(); document.head.appendChild(script);
+    } else { initMap(); }
+  }, [loading, userLat, userLng, sitters]);
+  const filteredSitters = sitters
+    .filter(s => s.latitude && s.longitude)
+    .map(s => ({ ...s, dist:distance(userLat, userLng, parseFloat(s.latitude), parseFloat(s.longitude)) }))
+    .filter(s => s.dist <= maxDist)
+    .filter(s => !search || s.first_name?.toLowerCase().includes(search.toLowerCase()) || s.last_name?.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b) => a.dist - b.dist);
+  return (
+    <div>
+      <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>🗺️ Babysitters près de chez vous</div>
+      <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:16 }}>Trouvez les babysitters disponibles dans votre quartier</div>
+      <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un babysitter…" style={{ flex:1, minWidth:200, background:G.card, border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }} />
+        <div style={{ display:"flex", alignItems:"center", gap:8, background:G.card, border:`1px solid ${G.border}`, borderRadius:10, padding:"0 14px" }}>
+          <span style={{ color:G.muted, fontSize:"0.78rem" }}>Rayon :</span>
+          <select value={maxDist} onChange={e=>setMaxDist(parseInt(e.target.value))} style={{ background:"transparent", border:"none", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", padding:"10px 4px" }}>
+            {[2,5,10,20,50].map(d => <option key={d} value={d}>{d} km</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 340px", gap:16, alignItems:"start" }}>
+        <div ref={mapRef} style={{ height:500, borderRadius:16, overflow:"hidden", border:`1px solid ${G.border}`, background:G.card }} />
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {selected && (
+            <Card style={{ borderColor:G.teal+"44" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+                <span style={{ fontSize:"2rem" }}>👩</span>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{selected.first_name} {selected.last_name}</div>
+                  <div style={{ color:G.muted, fontSize:"0.78rem" }}>📍 {selected.city} · {selected.dist} km de vous</div>
+                </div>
+                <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer" }}>✕</button>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                <div style={{ background:G.night, borderRadius:8, padding:"8px 12px", textAlign:"center" }}>
+                  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.teal }}>{selected.hourly_rate}€/h</div>
+                  <div style={{ fontSize:"0.65rem", color:G.muted }}>Tarif</div>
+                </div>
+                <div style={{ background:G.night, borderRadius:8, padding:"8px 12px", textAlign:"center" }}>
+                  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.amber }}>⭐ {selected.rating||"—"}</div>
+                  <div style={{ fontSize:"0.65rem", color:G.muted }}>Note</div>
+                </div>
+              </div>
+              {selected.bio && <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:12, lineHeight:1.5 }}>{selected.bio}</div>}
+              {selected.verification_status==="verified" && <Badge color={G.green} style={{marginBottom:10}}>✅ Identité vérifiée</Badge>}
+            </Card>
+          )}
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"0.9rem" }}>
+            {filteredSitters.length} babysitter{filteredSitters.length>1?"s":""} à moins de {maxDist} km
+          </div>
+          {filteredSitters.length===0 && !loading && (
+            <Card style={{ textAlign:"center", padding:20 }}>
+              <div style={{ fontSize:"2rem", marginBottom:8 }}>😔</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem" }}>Aucun babysitter dans ce rayon.</div>
+              <button onClick={()=>setMaxDist(50)} style={{ marginTop:10, background:"none", border:"none", color:G.teal, cursor:"pointer", fontSize:"0.82rem", fontWeight:600 }}>Élargir à 50 km →</button>
+            </Card>
+          )}
+          <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:340, overflowY:"auto" }}>
+            {filteredSitters.map(s => (
+              <Card key={s.id} onClick={() => setSelected(s)} style={{ cursor:"pointer", borderColor:selected?.id===s.id?G.teal+"44":"transparent", padding:"14px 16px" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <span style={{ fontSize:"1.5rem" }}>👩</span>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:700, color:"#fff", fontSize:"0.88rem" }}>{s.first_name} {s.last_name}</div>
+                    <div style={{ color:G.muted, fontSize:"0.72rem" }}>📍 {s.dist.toFixed(1)} km · ⭐ {s.rating||"—"} · {s.hourly_rate}€/h</div>
+                  </div>
+                  {s.verification_status==="verified" && <span style={{ fontSize:"0.7rem", color:G.green }}>✅</span>}
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1693,317 +1943,6 @@ const AdminDashboard = ({ user, onLogout }) => {
   );
 };
 
-// ─── PARENT PROFILE ───────────────────────────────────────────
-const ParentProfile = ({ user, showToast }) => {
-  const [saving, setSaving] = useState(false);
-  const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
-  const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [city, setCity] = useState("");
-  const [country, setCountry] = useState("France");
-  const [birthDate, setBirthDate] = useState("");
-  const [birthPlace, setBirthPlace] = useState("");
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    fetch(`${API}/profile/parent`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-    .then(r => r.json())
-    .then(data => {
-      if (data.first_name) setFirstName(data.first_name);
-      if (data.last_name) setLastName(data.last_name);
-      if (data.phone) setPhone(data.phone || "");
-      if (data.address) setAddress(data.address || "");
-      if (data.postal_code) setPostalCode(data.postal_code || "");
-      if (data.city) setCity(data.city || "");
-      if (data.country) setCountry(data.country || "France");
-      if (data.birth_date) setBirthDate(data.birth_date?.slice(0,10) || "");
-      if (data.birth_place) setBirthPlace(data.birth_place || "");
-    })
-    .catch(console.error);
-  }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${API}/profile/parent`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace })
-      });
-      const data = await res.json();
-      if (res.ok) showToast("✅ Profil mis à jour !", "ok");
-      else showToast("❌ " + data.error, "err");
-    } catch(e) {
-      showToast("❌ Erreur de connexion.", "err");
-    }
-    setSaving(false);
-  };
-
-  return (
-    <div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
-        <div>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>👤 Mon profil</div>
-          <div style={{ color:G.muted, fontSize:"0.85rem" }}>Gérez vos informations personnelles</div>
-        </div>
-        <Btn onClick={handleSave} variant="teal" disabled={saving}>
-          {saving ? "Sauvegarde…" : "💾 Sauvegarder"}
-        </Btn>
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
-        <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>👤 Informations personnelles</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-            <Input label="Prénom" value={firstName} onChange={setFirstName} placeholder="Sophie" />
-            <Input label="Nom" value={lastName} onChange={setLastName} placeholder="Dupont" />
-          </div>
-          <Input label="Téléphone" value={phone} onChange={setPhone} placeholder="+33 6 12 34 56 78" icon="📱" />
-          <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
-          <Input label="Lieu de naissance" value={birthPlace} onChange={setBirthPlace} placeholder="Paris, France" icon="📍" />
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Pays</label>
-            <select value={country} onChange={e=>setCountry(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
-              {["France","Belgique","Suisse","Canada","Maroc","Sénégal","Côte d'Ivoire","Algérie","Tunisie","Autre"].map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>🏠 Adresse complète</div>
-          <Input label="Adresse" value={address} onChange={setAddress} placeholder="12 rue de la Paix" icon="🏠" />
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:12 }}>
-            <Input label="Code postal" value={postalCode} onChange={setPostalCode} placeholder="75001" />
-            <Input label="Ville" value={city} onChange={setCity} placeholder="Paris" icon="📍" />
-          </div>
-          <div style={{ background:G.teal+"11", border:`1px solid ${G.teal}33`, borderRadius:10, padding:14, marginTop:8 }}>
-            <div style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.7 }}>
-              📍 Votre adresse est utilisée pour trouver les babysitters les plus proches de chez vous. Elle n'est jamais partagée publiquement.
-            </div>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-// ─── MAP VIEW ─────────────────────────────────────────────────
-const MapView = ({ user, onBook, showToast }) => {
-  const [sitters, setSitters] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [userLat, setUserLat] = useState(48.8566);
-  const [userLng, setUserLng] = useState(2.3522);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [maxDist, setMaxDist] = useState(10);
-  const mapRef = useRef(null);
-  const mapInstance = useRef(null);
-  const markersRef = useRef([]);
-
-  // Calculer distance en km entre deux points
-  const distance = (lat1, lon1, lat2, lon2) => {
-    const R = 6371;
-    const dLat = (lat2-lat1) * Math.PI/180;
-    const dLon = (lon2-lon1) * Math.PI/180;
-    const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-              Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-              Math.sin(dLon/2)*Math.sin(dLon/2);
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  };
-
-  useEffect(() => {
-    // Charger les babysitters
-    fetch(`${API}/profile/sitters/map`)
-      .then(r => r.json())
-      .then(data => { setSitters(Array.isArray(data) ? data : []); setLoading(false); })
-      .catch(() => setLoading(false));
-
-    // Géolocalisation de l'utilisateur
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => { setUserLat(pos.coords.latitude); setUserLng(pos.coords.longitude); },
-        () => {} // Paris par défaut si refusé
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    if (loading || !mapRef.current) return;
-
-    // Charger Leaflet dynamiquement
-    if (!window.L) {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = () => initMap();
-      document.head.appendChild(script);
-    } else {
-      initMap();
-    }
-  }, [loading, userLat, userLng, sitters]);
-
-  const initMap = () => {
-    if (!window.L || !mapRef.current) return;
-    if (mapInstance.current) { mapInstance.current.remove(); }
-
-    const map = window.L.map(mapRef.current).setView([userLat, userLng], 13);
-    mapInstance.current = map;
-
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
-
-    // Marqueur utilisateur
-    const userIcon = window.L.divIcon({
-      html: `<div style="background:#2dd4bf;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`,
-      iconSize: [16, 16], iconAnchor: [8, 8], className: ''
-    });
-    window.L.marker([userLat, userLng], { icon: userIcon })
-      .addTo(map)
-      .bindPopup('<strong>📍 Vous êtes ici</strong>');
-
-    // Marqueurs babysitters
-    markersRef.current = [];
-    sitters.forEach(s => {
-      if (!s.latitude || !s.longitude) return;
-      const dist = distance(userLat, userLng, parseFloat(s.latitude), parseFloat(s.longitude));
-
-      const sitterIcon = window.L.divIcon({
-        html: `<div style="background:${s.verification_status==='verified'?'#fbbf24':'#a78bfa'};width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:1.2rem">👩</div>`,
-        iconSize: [36, 36], iconAnchor: [18, 18], className: ''
-      });
-
-      const marker = window.L.marker([parseFloat(s.latitude), parseFloat(s.longitude)], { icon: sitterIcon })
-        .addTo(map)
-        .bindPopup(`
-          <div style="font-family:Arial,sans-serif;min-width:180px">
-            <strong style="font-size:0.95rem">${s.first_name} ${s.last_name}</strong><br/>
-            <span style="color:#666;font-size:0.8rem">📍 ${s.city || 'N/A'} · ${dist.toFixed(1)} km</span><br/>
-            <span style="font-size:0.8rem">⭐ ${s.rating || '—'} · ${s.hourly_rate || '—'}€/h</span><br/>
-            ${s.verification_status === 'verified' ? '<span style="color:#22c55e;font-size:0.75rem">✅ Identité vérifiée</span>' : ''}
-          </div>
-        `)
-        .on('click', () => setSelected({ ...s, dist: dist.toFixed(1) }));
-
-      markersRef.current.push({ marker, sitter: s });
-    });
-  };
-
-  const filteredSitters = sitters
-    .filter(s => s.latitude && s.longitude)
-    .map(s => ({ ...s, dist: distance(userLat, userLng, parseFloat(s.latitude), parseFloat(s.longitude)) }))
-    .filter(s => s.dist <= maxDist)
-    .filter(s => !search || s.first_name?.toLowerCase().includes(search.toLowerCase()) || s.last_name?.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => a.dist - b.dist);
-
-  return (
-    <div>
-      <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>
-        🗺️ Babysitters près de chez vous
-      </div>
-      <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:16 }}>
-        Trouvez les babysitters disponibles dans votre quartier
-      </div>
-
-      {/* Filtres */}
-      <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un babysitter…" style={{ flex:1, minWidth:200, background:G.card, border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }} />
-        <div style={{ display:"flex", alignItems:"center", gap:8, background:G.card, border:`1px solid ${G.border}`, borderRadius:10, padding:"0 14px" }}>
-          <span style={{ color:G.muted, fontSize:"0.78rem" }}>Rayon :</span>
-          <select value={maxDist} onChange={e=>setMaxDist(parseInt(e.target.value))} style={{ background:"transparent", border:"none", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", padding:"10px 4px" }}>
-            {[2,5,10,20,50].map(d => <option key={d} value={d}>{d} km</option>)}
-          </select>
-        </div>
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 340px", gap:16, alignItems:"start" }}>
-
-        {/* Carte */}
-        <div>
-          <div ref={mapRef} style={{ height:500, borderRadius:16, overflow:"hidden", border:`1px solid ${G.border}`, background:G.card }} />
-          {loading && (
-            <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", background:"rgba(15,25,35,0.8)", borderRadius:16 }}>
-              <div style={{ color:G.muted }}>Chargement de la carte…</div>
-            </div>
-          )}
-        </div>
-
-        {/* Liste et détail */}
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-
-          {/* Détail babysitter sélectionné */}
-          {selected && (
-            <Card style={{ borderColor:G.teal+"44" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
-                <span style={{ fontSize:"2rem" }}>{selected.avatar || "👩"}</span>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{selected.first_name} {selected.last_name}</div>
-                  <div style={{ color:G.muted, fontSize:"0.78rem" }}>📍 {selected.city} · {selected.dist} km de vous</div>
-                </div>
-                <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer" }}>✕</button>
-              </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
-                <div style={{ background:G.night, borderRadius:8, padding:"8px 12px", textAlign:"center" }}>
-                  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.teal }}>{selected.hourly_rate}€/h</div>
-                  <div style={{ fontSize:"0.65rem", color:G.muted }}>Tarif</div>
-                </div>
-                <div style={{ background:G.night, borderRadius:8, padding:"8px 12px", textAlign:"center" }}>
-                  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.amber }}>⭐ {selected.rating || "—"}</div>
-                  <div style={{ fontSize:"0.65rem", color:G.muted }}>Note</div>
-                </div>
-              </div>
-              {selected.bio && <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:12, lineHeight:1.5 }}>{selected.bio}</div>}
-              {selected.verification_status === "verified" && <Badge color={G.green} style={{marginBottom:10}}>✅ Identité vérifiée</Badge>}
-              <Btn onClick={() => onBook(SITTERS_LIST.find(s=>s.id===`S${selected.id}`)||SITTERS_LIST[0])} variant="teal" full size="sm">
-                Réserver ce babysitter →
-              </Btn>
-            </Card>
-          )}
-
-          {/* Liste des babysitters proches */}
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"0.9rem" }}>
-            {filteredSitters.length} babysitter{filteredSitters.length>1?"s":""} à moins de {maxDist} km
-          </div>
-
-          {filteredSitters.length === 0 && !loading && (
-            <Card style={{ textAlign:"center", padding:20 }}>
-              <div style={{ fontSize:"2rem", marginBottom:8 }}>😔</div>
-              <div style={{ color:G.muted, fontSize:"0.85rem" }}>Aucun babysitter dans ce rayon.</div>
-              <button onClick={()=>setMaxDist(50)} style={{ marginTop:10, background:"none", border:"none", color:G.teal, cursor:"pointer", fontSize:"0.82rem", fontWeight:600 }}>
-                Élargir à 50 km →
-              </button>
-            </Card>
-          )}
-
-          <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:340, overflowY:"auto" }}>
-            {filteredSitters.map(s => (
-              <Card key={s.id} onClick={() => setSelected(s)} style={{ cursor:"pointer", borderColor: selected?.id===s.id ? G.teal+"44" : "transparent", padding:"14px 16px" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                  <span style={{ fontSize:"1.5rem" }}>👩</span>
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontWeight:700, color:"#fff", fontSize:"0.88rem" }}>{s.first_name} {s.last_name}</div>
-                    <div style={{ color:G.muted, fontSize:"0.72rem" }}>📍 {s.dist.toFixed(1)} km · ⭐ {s.rating || "—"} · {s.hourly_rate}€/h</div>
-                  </div>
-                  {s.verification_status === "verified" && <span style={{ fontSize:"0.7rem", color:G.green }}>✅</span>}
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // ─── MAIN APP ─────────────────────────────────────────────────
 export default function App() {
@@ -2040,11 +1979,8 @@ const addReview = (id, rating, review) => {
   const cancelBooking  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Réservation annulée.", "err"); };
   const acceptMission  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"confirmed"} : b)); showToast("✅ Mission acceptée !", "ok"); };
   const declineMission = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Mission refusée.", "err"); };
+  const addReview      = (id, rating, review) => { setBookings(prev => prev.map(b => b.id===id?{...b,rating,review}:b)); showToast("⭐ Avis publié avec succès !", "ok"); };
 
-  // ── PAGE ADMIN ──
-  if (user?.role === "admin") return (
-    <AdminDashboard user={user} onLogout={handleLogout} />
-  );
 
   if (!user) return (
     <>
@@ -2065,21 +2001,13 @@ const addReview = (id, rating, review) => {
   const renderPage = () => {
     if (page==="home")     return isParent ? <ParentHome user={user} bookings={bookings} onNav={setPage}/> : <SitterHome user={user} bookings={bookings} onNav={setPage}/>;
     if (page==="search")   return <SearchSitters onBook={addBooking} showToast={showToast}/>;
-   if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview}/>;
+    if (page==="map")      return <MapView user={user} showToast={showToast}/>;
+    if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview}/>;
+    if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast}/>;
     if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission}/>;
     if (page==="profile")  return <SitterProfile user={user} bookings={bookings} showToast={showToast}/>;
     if (page==="camera")   return <CameraPage user={user}/>;
-    return null;
-  };
-
-  const renderPage = () => {
-  if (page==="home")     return isParent ? <ParentHome user={user} bookings={bookings} onNav={setPage}/> : <SitterHome user={user} bookings={bookings} onNav={setPage}/>;
-  if (page==="search")   return <SearchSitters onBook={addBooking} showToast={showToast}/>;
-  if (page==="map")      return <MapView user={user} onBook={(s) => { setPage("search"); }} showToast={showToast}/>;
-  if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview}/>;
-  if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast}/>;
-  if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission}/>;
-  if (page==="camera")   return <CameraPage user={user}/>;
+  
   return null;
 };
   return (
