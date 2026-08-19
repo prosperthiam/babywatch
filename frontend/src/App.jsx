@@ -1046,15 +1046,15 @@ const SitterProfile = ({ user, bookings, showToast }) => {
   const [uploadedUrl, setUploadedUrl] = useState("");
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const geocodeAddress = async (addr, cty, postal) => {
-  if (!file) return;
-  setUploadingDoc(true);
-  setUploadError("");}
+const geocodeAddress = async (addr, cty, postal) => {
   try {
-     const token = localStorage.getItem('token');
-      const query = `${addr} ${postal} ${cty} France`;
-    const formData = new FormData();
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`)
+    const query = `${addr} ${postal} ${cty} France`;
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+    const data = await res.json();
+    if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch(e) { console.error(e); }
+  return null;
+};
 
 const handleUploadId = async (file) => {
   if (!file) return;
@@ -1482,7 +1482,7 @@ const handleUploadId = async (file) => {
       )}
     </div>
   );
-};
+ };
 
 // ─── CAMERA PAGE ──────────────────────────────────────────────
 const CameraPage = ({ user }) => {
@@ -1956,10 +1956,7 @@ export default function App() {
 
   const isConfirmPage = window.location.pathname === "/confirm" || (window.location.search.includes("token=") && !window.location.pathname.includes("reset"));
   const isResetPage   = window.location.pathname === "/reset-password" || (window.location.search.includes("token=") && window.location.pathname.includes("reset"));
-const addReview = (id, rating, review) => {
-  setBookings(prev => prev.map(b => b.id===id ? {...b, rating, review} : b));
-  showToast("⭐ Avis publié avec succès !", "ok");
-};
+
 
   if (isConfirmPage) return (
     <>
@@ -2009,6 +2006,7 @@ const addReview = (id, rating, review) => {
     if (page==="camera")   return <CameraPage user={user}/>;
   
   return null;
+    
 };
   return (
     <>
@@ -2033,4 +2031,4 @@ const addReview = (id, rating, review) => {
       <Toast toast={toast}/>
     </>
   );
-}
+  }
