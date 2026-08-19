@@ -1,10 +1,13 @@
 const router = require('express').Router();
 const { Pool } = require('pg');
 const jwt = require('jsonwebtoken');
+const {
+  sendNewBookingToSitter,
+  sendBookingConfirmedToParent,
+  sendBookingDeclinedToParent,
+} = require('../services/email');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
-});
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 const auth = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
@@ -53,13 +56,22 @@ router.post('/', auth, async (req, res) => {
   const { sitterId, date, timeStart, duration, address, children, notes, camera, price } = req.body;
   try {
     const result = await pool.query(
-      `INSERT INTO bookings
+      `INSERT INTO bookings 
         (parent_id, sitter_id, date, time_start, duration, address, children, notes, camera, price)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
        RETURNING *`,
       [req.userId, sitterId, date, timeStart, duration, address, children, notes, camera, price]
     );
-    res.json(result.rows[0]);
+    const booking = result.rows[0];
+
+    // Envoyer email à la babysitter
+    const sitterResult = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [sitterId]);
+    const sitter = sitterResult.rows[0];
+    if (sitter) {
+      await sendNewBookingToSitter(sitter.email, sitter.first_name, booking).catch(console.error);
+    }
+
+    res.json(booking);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erreur serveur.' });
@@ -74,7 +86,23 @@ router.patch('/:id/status', auth, async (req, res) => {
       'UPDATE bookings SET status = $1 WHERE id = $2 RETURNING *',
       [status, req.params.id]
     );
-    res.json(result.rows[0]);
+    const booking = result.rows[0];
+
+    // Récupérer infos parent et sitter
+    const parentResult = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [booking.parent_id]);
+    const sitterResult = await pool.query('SELECT email, first_name FROM users WHERE id = $1', [booking.sitter_id]);
+    const parent = parentResult.rows[0];
+    const sitter = sitterResult.rows[0];
+
+    // Envoyer email selon le statut
+    if (status === 'confirmed' && parent && sitter) {
+      await sendBookingConfirmedToParent(parent.email, parent.first_name, booking, sitter.first_name).catch(console.error);
+    }
+    if (status === 'cancelled' && parent && sitter) {
+      await sendBookingDeclinedToParent(parent.email, parent.first_name, booking, sitter.first_name).catch(console.error);
+    }
+
+    res.json(booking);
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Erreur serveur.' });
