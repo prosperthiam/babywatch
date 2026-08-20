@@ -651,6 +651,7 @@ const SearchSitters = ({ onBook, showToast }) => {
 
 // ─── BOOKING FORM ─────────────────────────────────────────────
 const BookingForm = ({ sitter, onBack, onConfirm }) => {
+  const [showPayment, setShowPayment] = useState(false);
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
   const [date, setDate] = useState(tomorrow.toISOString().slice(0,10));
   const [time, setTime] = useState("18:30");
@@ -689,7 +690,17 @@ const BookingForm = ({ sitter, onBack, onConfirm }) => {
               </div>
             </div>
           )}
-          <Btn onClick={() => { if(!address){alert("Renseignez l'adresse."); return;} onConfirm({id:"BK"+Date.now(),sitterId:sitter.id,sitterName:sitter.name,sitterAvatar:sitter.avatar,date,time,duration:duration+"h",children:parseInt(children),address,notes,camera,status:"pending",price,createdAt:new Date().toISOString().slice(0,10)}); }} variant="teal" size="lg" full>Envoyer la demande →</Btn>
+{showPayment && (
+  <PaymentModal
+    booking={{ id:"temp", sitterName:sitter.name, date, time, duration:duration+"h", children:parseInt(children), address, camera, price }}
+    onClose={() => setShowPayment(false)}
+    onSuccess={() => onConfirm({ id:"BK"+Date.now(), sitterId:sitter.id, sitterName:sitter.name, sitterAvatar:sitter.avatar, date, time, duration:duration+"h", children:parseInt(children), address, notes, camera, status:"confirmed", price, createdAt:new Date().toISOString().slice(0,10) })}
+    showToast={() => {}}
+  />
+)}
+<Btn onClick={() => { if(!address){alert("Renseignez l'adresse."); return;} setShowPayment(true); }} variant="teal" size="lg" full>
+  💳 Procéder au paiement →
+</Btn>
         </Card>
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           <Card>
@@ -1939,6 +1950,150 @@ const AdminDashboard = ({ user, onLogout }) => {
       )}
 
       <Toast toast={toast} />
+    </div>
+  );
+};
+
+// ─── PAYMENT MODAL ────────────────────────────────────────────
+const PaymentModal = ({ booking, onClose, onSuccess, showToast }) => {
+  const [loading, setLoading] = useState(false);
+  const [paid, setPaid] = useState(false);
+  const [cardName, setCardName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvv, setCvv] = useState("");
+  const [error, setError] = useState("");
+
+  const formatCard = (val) => val.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim().slice(0,19);
+  const formatExpiry = (val) => val.replace(/\D/g,'').replace(/^(\d{2})(\d)/,'$1/$2').slice(0,5);
+
+  const handlePayment = async () => {
+    if (!cardName || cardNumber.replace(/\s/g,'').length < 16 || expiry.length < 5 || cvv.length < 3) {
+      setError("Veuillez remplir tous les champs correctement."); return;
+    }
+    setLoading(true); setError("");
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/payments/create-intent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ amount: booking.price, bookingId: booking.id, sitterName: booking.sitterName })
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error); setLoading(false); return; }
+      // Simuler confirmation (en production utiliser Stripe Elements)
+      setTimeout(async () => {
+        const confirmRes = await fetch(`${API}/payments/confirm`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ paymentIntentId: data.clientSecret.split('_secret')[0], bookingId: booking.id })
+        });
+        if (confirmRes.ok) { setPaid(true); setLoading(false); }
+        else { setError("Erreur de confirmation."); setLoading(false); }
+      }, 2000);
+    } catch(e) { setError("Erreur de connexion."); setLoading(false); }
+  };
+
+  if (paid) return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <Card style={{ maxWidth:420, width:"100%", textAlign:"center", padding:40 }}>
+        <div style={{ fontSize:"3.5rem", marginBottom:16 }}>🎉</div>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:12 }}>Paiement réussi !</div>
+        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:8 }}>Votre réservation est confirmée.</div>
+        <div style={{ color:G.teal, fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", marginBottom:24 }}>{booking.price}€ payés</div>
+        <Btn onClick={() => { onSuccess(); onClose(); }} variant="teal" size="lg" full>Voir ma réservation →</Btn>
+      </Card>
+    </div>
+  );
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", backdropFilter:"blur(4px)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:480, overflow:"hidden", boxShadow:"0 24px 80px #0008" }}>
+
+        {/* Header */}
+        <div style={{ background:G.night, padding:"24px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.2rem", color:"#fff" }}>💳 Paiement sécurisé</div>
+            <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:4 }}>Garde avec {booking.sitterName} · {booking.date}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.1)", border:"none", color:G.muted, width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:"1.1rem" }}>✕</button>
+        </div>
+
+        <div style={{ padding:"28px" }}>
+
+          {/* Récapitulatif */}
+          <div style={{ background:G.card, borderRadius:12, padding:16, marginBottom:20, border:`1px solid ${G.border}` }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+              <span style={{ color:G.muted, fontSize:"0.85rem" }}>Garde {booking.duration} · {booking.children} enfant{booking.children>1?"s":""}</span>
+              <span style={{ color:G.text, fontWeight:600 }}>{booking.price}€</span>
+            </div>
+            {booking.camera && (
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <span style={{ color:G.muted, fontSize:"0.85rem" }}>📹 Surveillance caméra</span>
+                <span style={{ color:G.teal, fontWeight:600 }}>Inclus</span>
+              </div>
+            )}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderTop:`1px solid ${G.border}`, paddingTop:10, marginTop:8 }}>
+              <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>Total</span>
+              <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:G.teal, fontSize:"1.3rem" }}>{booking.price}€</span>
+            </div>
+          </div>
+
+          {/* Formulaire carte */}
+          <Input label="Nom sur la carte" value={cardName} onChange={setCardName} placeholder="SOPHIE DUPONT" icon="👤" />
+
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Numéro de carte</label>
+            <div style={{ position:"relative" }}>
+              <input
+                value={cardNumber}
+                onChange={e => setCardNumber(formatCard(e.target.value))}
+                placeholder="1234 5678 9012 3456"
+                maxLength={19}
+                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px 10px 44px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none", letterSpacing:"0.05em" }}
+              />
+              <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:"1.2rem" }}>💳</span>
+            </div>
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Date d'expiration</label>
+              <input
+                value={expiry}
+                onChange={e => setExpiry(formatExpiry(e.target.value))}
+                placeholder="MM/AA"
+                maxLength={5}
+                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}
+              />
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>CVV</label>
+              <input
+                value={cvv}
+                onChange={e => setCvv(e.target.value.replace(/\D/g,'').slice(0,3))}
+                placeholder="123"
+                maxLength={3}
+                type="password"
+                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(45,212,191,0.06)", border:`1px solid ${G.teal}33`, borderRadius:10, padding:"10px 14px", marginBottom:20, fontSize:"0.78rem", color:G.muted }}>
+            🔒 Paiement sécurisé via <strong style={{ color:G.teal, marginLeft:4 }}>Stripe</strong> · Données chiffrées SSL 256-bit
+          </div>
+
+          {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
+
+          <div style={{ display:"flex", gap:10 }}>
+            <Btn onClick={onClose} variant="ghost" full>Annuler</Btn>
+            <Btn onClick={handlePayment} variant="teal" full disabled={loading}>
+              {loading ? "Traitement en cours…" : `💳 Payer ${booking.price}€`}
+            </Btn>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

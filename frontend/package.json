@@ -15,6 +15,7 @@
     "@capacitor/core": "^8.5.0",
     "@capacitor/ios": "^8.5.0",
     "@livekit/components-react": "^2.9.23",
+    "@stripe/stripe-js": "^9.13.0",
     "axios": "^1.18.1",
     "livekit-client": "^2.20.2",
     "react": "^19.2.7",
