@@ -638,6 +638,9 @@ const SearchSitters = ({ onBook, showToast }) => {
             </div>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", borderTop:`1px solid ${G.border}`, paddingTop:12 }}>
               <div style={{ fontSize:"0.82rem", color:G.muted }}>⭐ {s.rating} · {s.missions} gardes</div>
+              <button onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }} style={{ background:"none", border:"none", fontSize:"1.3rem", cursor:"pointer", padding:4 }}>
+  {favorites.includes(s.id) ? "❤️" : "🤍"}
+</button>
               <Btn onClick={() => s.available && setSelected(s)} variant={s.available?"teal":"ghost"} size="sm" disabled={!s.available}>
                 {s.available ? "Réserver →" : "Indisponible"}
               </Btn>
@@ -1700,6 +1703,12 @@ const MapView = ({ user, showToast }) => {
                     <div style={{ fontWeight:700, color:"#fff", fontSize:"0.88rem" }}>{s.first_name} {s.last_name}</div>
                     <div style={{ color:G.muted, fontSize:"0.72rem" }}>📍 {s.dist.toFixed(1)} km · ⭐ {s.rating||"—"} · {s.hourly_rate}€/h</div>
                   </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+  {s.verification_status==="verified" && <span style={{ fontSize:"0.7rem", color:G.green }}>✅</span>}
+  <button onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }} style={{ background:"none", border:"none", fontSize:"1rem", cursor:"pointer", padding:2 }}>
+    {favorites.includes(s.id) ? "❤️" : "🤍"}
+  </button>
+</div>
                   {s.verification_status==="verified" && <span style={{ fontSize:"0.7rem", color:G.green }}>✅</span>}
                 </div>
               </Card>
