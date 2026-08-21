@@ -2101,6 +2101,33 @@ const PaymentModal = ({ booking, onClose, onSuccess, showToast }) => {
 
 // ─── MAIN APP ─────────────────────────────────────────────────
 export default function App() {
+  useEffect(() => {
+  const initPush = async () => {
+    try {
+      const { PushNotifications } = await import('@capacitor/push-notifications');
+      await PushNotifications.requestPermissions();
+      await PushNotifications.register();
+      PushNotifications.addListener('registration', token => {
+        console.log('Push token:', token.value);
+        // Envoyer le token au backend
+        const authToken = localStorage.getItem('token');
+        if (authToken) {
+          fetch(`${API}/notifications/register-token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+            body: JSON.stringify({ pushToken: token.value })
+          }).catch(console.error);
+        }
+      });
+      PushNotifications.addListener('pushNotificationReceived', notification => {
+        console.log('Notification reçue:', notification);
+      });
+    } catch(e) {
+      console.log('Push non disponible sur web');
+    }
+  };
+  if (user) initPush();
+}, [user]);
   const [user, setUser] = useState(null);
   const [page, setPage] = useState("home");
   const [bookings, setBookings] = useState(BOOKINGS_INIT);
