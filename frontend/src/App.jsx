@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 // v2.1 - fix sitter profile
 const API = 'https://babywatch-production.up.railway.app/api';
+import { translations, useTranslation } from './translations.js';
 
 const USERS = {
   "parent@demo.fr":   { password: "demo123", role: "parent",   name: "Sophie Dupont",    avatar: "👩‍👧", id: "P001" },
@@ -397,7 +398,7 @@ const AuthPage = ({ onLogin }) => {
 };
 
 // ─── NAV ──────────────────────────────────────────────────────
-const Nav = ({ user, activePage, onNav, onLogout }) => {
+const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange  }) => {
   const isParent = user.role === "parent";
   const navItems = isParent
   ? [
@@ -436,6 +437,15 @@ const Nav = ({ user, activePage, onNav, onLogout }) => {
             <div style={{ fontSize:"0.65rem", color:G.muted }}>{user.email}</div>
           </div>
         </div>
+        <select
+  value={lang}
+  onChange={e => onLangChange(e.target.value)}
+  style={{ background:G.card, border:`1px solid ${G.border}`, color:G.text, borderRadius:8, padding:"6px 10px", fontFamily:"'Inter',sans-serif", fontSize:"0.82rem", cursor:"pointer", outline:"none" }}
+>
+  <option value="fr">🇫🇷 FR</option>
+  <option value="en">🇬🇧 EN</option>
+  <option value="ar">🇸🇦 AR</option>
+</select>
         <button onClick={onLogout} style={{ background:"rgba(255,95,87,0.12)", border:"1px solid rgba(255,95,87,0.25)", color:G.coral, padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:"0.78rem", fontWeight:600 }}>Déconnexion</button>
       </div>
     </nav>
@@ -2213,8 +2223,7 @@ export default function App() {
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
         select option{background:#162030}
       `}</style>
-      <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout}/>
-      <main style={{ paddingTop:64, minHeight:"100vh" }}>
+        <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout} lang={lang} onLangChange={changeLang}/>      <main style={{ paddingTop:64, minHeight:"100vh" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", padding:"32px 24px" }}>
           {renderPage()}
         </div>
