@@ -2215,6 +2215,7 @@ export default function App() {
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         body{font-family:'Inter',sans-serif;background:#0f1923;color:#e2e8f0}
+        body { direction: ${lang === 'ar' ? 'rtl' : 'ltr'}; text-align: ${lang === 'ar' ? 'right' : 'left'}; }
         input,select,textarea{color:#e2e8f0!important}
         input:focus,select:focus,textarea:focus{border-color:#2dd4bf!important;outline:none!important}
         @keyframes bw-blink{50%{opacity:0}}
