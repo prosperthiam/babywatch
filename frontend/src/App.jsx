@@ -724,11 +724,38 @@ const SearchSitters = ({ onBook, showToast }) => {
   const [search, setSearch] = useState("");
   const [filterCam, setFilterCam] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [favorites, setFavorites] = useState([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/favorites`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setFavorites(Array.isArray(data) ? data.map(f => f.id) : []))
+      .catch(console.error);
+  }, []);
+
+  const toggleFavorite = async (sitterId) => {
+    const token = localStorage.getItem('token');
+    const isFav = favorites.includes(sitterId);
+    if (isFav) {
+      await fetch(`${API}/favorites/${sitterId}`, { method:'DELETE', headers:{ 'Authorization':`Bearer ${token}` } });
+      setFavorites(prev => prev.filter(id => id !== sitterId));
+      showToast("💔 Retiré des favoris", "err");
+    } else {
+      await fetch(`${API}/favorites/${sitterId}`, { method:'POST', headers:{ 'Authorization':`Bearer ${token}` } });
+      setFavorites(prev => [...prev, sitterId]);
+      showToast("❤️ Ajouté aux favoris !", "ok");
+    }
+  };
+
   const filtered = SITTERS_LIST.filter(s =>
     (s.name.toLowerCase().includes(search.toLowerCase()) || s.city.toLowerCase().includes(search.toLowerCase()) || s.tags.some(t => t.toLowerCase().includes(search.toLowerCase()))) &&
     (!filterCam || s.camera)
   );
+
   if (selected) return <BookingForm sitter={selected} onBack={() => setSelected(null)} onConfirm={(b) => { onBook(b); setSelected(null); showToast("🎉 Demande envoyée !", "ok"); }} />;
+
   return (
     <div>
       <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>Trouver un babysitter</div>
@@ -760,12 +787,14 @@ const SearchSitters = ({ onBook, showToast }) => {
             </div>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", borderTop:`1px solid ${G.border}`, paddingTop:12 }}>
               <div style={{ fontSize:"0.82rem", color:G.muted }}>⭐ {s.rating} · {s.missions} gardes</div>
-              <button onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }} style={{ background:"none", border:"none", fontSize:"1.3rem", cursor:"pointer", padding:4 }}>
-  {favorites.includes(s.id) ? "❤️" : "🤍"}
-</button>
-              <Btn onClick={() => s.available && setSelected(s)} variant={s.available?"teal":"ghost"} size="sm" disabled={!s.available}>
-                {s.available ? "Réserver →" : "Indisponible"}
-              </Btn>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <button onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }} style={{ background:"none", border:"none", fontSize:"1.3rem", cursor:"pointer", padding:4 }}>
+                  {favorites.includes(s.id) ? "❤️" : "🤍"}
+                </button>
+                <Btn onClick={() => s.available && setSelected(s)} variant={s.available?"teal":"ghost"} size="sm" disabled={!s.available}>
+                  {s.available ? "Réserver →" : "Indisponible"}
+                </Btn>
+              </div>
             </div>
           </Card>
         ))}
@@ -773,7 +802,6 @@ const SearchSitters = ({ onBook, showToast }) => {
     </div>
   );
 };
-
 // ─── BOOKING FORM ─────────────────────────────────────────────
 const BookingForm = ({ sitter, onBack, onConfirm }) => {
   const [showPayment, setShowPayment] = useState(false);
