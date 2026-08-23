@@ -97,22 +97,50 @@ router.get('/confirm/:token', async (req, res) => {
   }
 });
 
-// ── CONNEXION ──
+// ── CONNEXION AVEC 2FA ──
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
-
     if (!user) return res.status(401).json({ error: 'Email introuvable.' });
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Mot de passe incorrect.' });
 
     if (!user.verified) {
-      return res.status(401).json({ 
-        error: 'Email non confirmé. Vérifiez votre boîte mail.' 
+      return res.status(401).json({ error: 'Veuillez confirmer votre email avant de vous connecter.' });
+    }
+
+    // Si 2FA activé
+    if (user.two_factor_enabled) {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await pool.query(
+        'UPDATE users SET two_factor_code = $1, two_factor_expires = $2 WHERE id = $3',
+        [code, expires, user.id]
+      );
+
+      // Envoyer le code par email
+      await resend.emails.send({
+        from: 'BabyWatch <onboarding@resend.dev>',
+        to: email,
+        subject: '🔐 Code de vérification BabyWatch',
+        html: `
+          <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:30px;background:#0f1923;color:#e2e8f0;border-radius:12px;">
+            <h1 style="color:#2dd4bf;">🍼 BabyWatch</h1>
+            <h2>Code de vérification</h2>
+            <p style="color:#94a3b8;">Votre code de connexion à usage unique :</p>
+            <div style="background:#1e2d40;border-radius:12px;padding:24px;text-align:center;margin:20px 0;">
+              <span style="font-size:2.5rem;font-weight:900;color:#2dd4bf;letter-spacing:0.3em;">${code}</span>
+            </div>
+            <p style="color:#64748b;font-size:0.85rem;">Ce code expire dans 10 minutes. Ne le partagez jamais.</p>
+          </div>
+        `
       });
+
+      return res.json({ requires2FA: true, userId: user.id });
     }
 
     const token = jwt.sign(
@@ -131,8 +159,59 @@ router.post('/login', async (req, res) => {
         avatar: user.role === 'parent' ? '👨‍👧' : '👩'
       }
     });
-  } catch (e) {
+  } catch(e) {
     console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ── VÉRIFIER CODE 2FA ──
+router.post('/verify-2fa', async (req, res) => {
+  const { userId, code } = req.body;
+  try {
+    const result = await pool.query(
+      'SELECT * FROM users WHERE id = $1 AND two_factor_code = $2 AND two_factor_expires > NOW()',
+      [userId, code]
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ error: 'Code invalide ou expiré.' });
+    }
+    const user = result.rows[0];
+    await pool.query('UPDATE users SET two_factor_code = NULL, two_factor_expires = NULL WHERE id = $1', [user.id]);
+
+    const token = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        name: `${user.first_name} ${user.last_name}`,
+        avatar: user.role === 'parent' ? '👨‍👧' : '👩'
+      }
+    });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ── ACTIVER/DÉSACTIVER 2FA ──
+router.post('/toggle-2fa', async (req, res) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Non autorisé.' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const result = await pool.query('SELECT two_factor_enabled FROM users WHERE id = $1', [decoded.userId]);
+    const current = result.rows[0].two_factor_enabled;
+    await pool.query('UPDATE users SET two_factor_enabled = $1 WHERE id = $2', [!current, decoded.userId]);
+    res.json({ enabled: !current, message: !current ? '2FA activé !' : '2FA désactivé.' });
+  } catch(e) {
     res.status(500).json({ error: 'Erreur serveur.' });
   }
 });

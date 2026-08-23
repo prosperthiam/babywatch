@@ -246,6 +246,78 @@ const ResetPasswordPage = ({ onBack }) => {
   );
 };
 
+// ─── 2FA PAGE ─────────────────────────────────────────────────
+const TwoFactorPage = ({ userId, onSuccess, onBack }) => {
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+
+  const handleVerify = async () => {
+    if (code.length !== 6) { setError("Entrez le code à 6 chiffres."); return; }
+    setLoading(true); setError("");
+    try {
+      const res = await fetch(`${API}/auth/verify-2fa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, code })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('token', data.token);
+        onSuccess(data.user);
+      } else {
+        setError(data.error);
+      }
+    } catch(e) { setError("Erreur de connexion."); }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:G.night, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:420, overflow:"hidden", boxShadow:"0 24px 80px #0008" }}>
+        <div style={{ padding:"32px" }}>
+          <div style={{ textAlign:"center", marginBottom:24 }}>
+            <div style={{ fontSize:"3rem", marginBottom:12 }}>🔐</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>Vérification en 2 étapes</div>
+            <div style={{ color:G.muted, fontSize:"0.85rem", lineHeight:1.6 }}>
+              Un code à 6 chiffres a été envoyé à votre email. Entrez-le ci-dessous.
+            </div>
+          </div>
+
+          {/* Input code stylisé */}
+          <div style={{ marginBottom:20 }}>
+            <input
+              value={code}
+              onChange={e => setCode(e.target.value.replace(/\D/g,'').slice(0,6))}
+              placeholder="000000"
+              maxLength={6}
+              style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`2px solid ${code.length===6?G.teal:G.border}`, borderRadius:12, padding:"16px", color:G.text, fontFamily:"'Nunito',sans-serif", fontSize:"2rem", fontWeight:900, outline:"none", textAlign:"center", letterSpacing:"0.5em", transition:"border-color 0.2s" }}
+            />
+          </div>
+
+          {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
+
+          <Btn onClick={handleVerify} variant="teal" size="lg" full disabled={loading||code.length!==6}>
+            {loading ? "Vérification…" : "✅ Vérifier →"}
+          </Btn>
+
+          <div style={{ display:"flex", justifyContent:"space-between", marginTop:16 }}>
+            <button onClick={onBack} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem" }}>← Retour</button>
+            <button onClick={async () => {
+              setResending(true);
+              // Renvoyer le code en relançant la connexion
+              setTimeout(() => setResending(false), 3000);
+            }} style={{ background:"none", border:"none", color:G.teal, cursor:"pointer", fontSize:"0.82rem", fontWeight:600 }}>
+              {resending ? "Envoyé ✓" : "Renvoyer le code"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── AUTH PAGE ────────────────────────────────────────────────
 const AuthPage = ({ onLogin }) => {
   const [mode, setMode] = useState("login");
@@ -255,23 +327,39 @@ const AuthPage = ({ onLogin }) => {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+ const [show2FA, setShow2FA] = useState(false);
+const [twoFAUserId, setTwoFAUserId] = useState(null);
 
-  const handleLogin = async () => {
-    setError("");
-    try {
-      const res = await fetch(`${API}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const data = await res.json();
-      if (!res.ok) { setError(data.error); return; }
-      localStorage.setItem('token', data.token);
-      onLogin(data.user);
-    } catch(e) {
-      setError("Erreur de connexion au serveur.");
+const handleLogin = async () => {
+  setError("");
+  try {
+    const res = await fetch(`${API}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error); return; }
+
+    // Si 2FA requis
+    if (data.requires2FA) {
+      setTwoFAUserId(data.userId);
+      setShow2FA(true);
+      return;
     }
-  };
+
+    localStorage.setItem('token', data.token);
+    onLogin(data.user);
+  } catch(e) { setError("Erreur de connexion au serveur."); }
+};
+
+if (show2FA) return (
+  <TwoFactorPage
+    userId={twoFAUserId}
+    onSuccess={onLogin}
+    onBack={() => setShow2FA(false)}
+  />
+);
 
   const handleRegister = async () => {
     if (!name || !email || !password) { setError("Remplissez tous les champs."); return; }
@@ -533,6 +621,7 @@ const ParentProfile = ({ user, showToast }) => {
   const [birthDate, setBirthDate] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
   useEffect(() => {
+   
     const token = localStorage.getItem('token');
     if (!token) return;
     fetch(`${API}/profile/parent`, { headers:{'Authorization':`Bearer ${token}`} })
@@ -563,6 +652,17 @@ const ParentProfile = ({ user, showToast }) => {
     } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
     setSaving(false);
   };
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+
+const toggleTwoFA = async () => {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${API}/auth/toggle-2fa`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (res.ok) { setTwoFAEnabled(data.enabled); showToast(data.message, "ok"); }
+};
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
@@ -603,7 +703,19 @@ const ParentProfile = ({ user, showToast }) => {
           </div>
         </Card>
       </div>
+    <Card style={{ marginTop:16 }}>
+  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>🔐 Sécurité</div>
+  <div onClick={toggleTwoFA} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", cursor:"pointer" }}>
+    <div style={{ flex:1 }}>
+      <div style={{ fontWeight:600, color:G.text, fontSize:"0.88rem" }}>Authentification à deux facteurs</div>
+      <div style={{ color:G.muted, fontSize:"0.75rem", marginTop:2 }}>Un code email est requis à chaque connexion</div>
     </div>
+    <div style={{ width:44, height:24, background:twoFAEnabled?G.teal:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
+      <div style={{ position:"absolute", top:3, left:twoFAEnabled?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
+    </div>
+  </div>
+</Card>
+</div>
   );
 };
 
@@ -1046,6 +1158,25 @@ const SitterProfile = ({ user, bookings, showToast }) => {
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState("unverified");
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+
+const toggleTwoFA = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API}/auth/toggle-2fa`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setTwoFAEnabled(data.enabled);
+      showToast(data.message, "ok");
+    }
+  } catch(e) {
+    showToast("❌ Erreur de connexion.", "err");
+  }
+};
+ 
   
   // Champs du profil
   const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
@@ -1158,6 +1289,17 @@ const handleUploadId = async (file) => {
     showToast("❌ Erreur de connexion.", "err");
   }
   setSaving(false);
+};
+const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+
+const toggleTwoFA = async () => {
+  const token = localStorage.getItem('token');
+  const res = await fetch(`${API}/auth/toggle-2fa`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  const data = await res.json();
+  if (res.ok) { setTwoFAEnabled(data.enabled); showToast(data.message, "ok"); }
 };
 
   const handleVerifyIdentity = async () => {
@@ -1303,6 +1445,18 @@ const handleUploadId = async (file) => {
   <button onClick={() => setTab("identity")} style={{ marginTop:14, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>
     → Vérifier mon identité
   </button>
+</Card>
+<Card>
+  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>🔐 Sécurité</div>
+  <div onClick={toggleTwoFA} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", cursor:"pointer" }}>
+    <div style={{ flex:1 }}>
+      <div style={{ fontWeight:600, color:G.text, fontSize:"0.88rem" }}>Authentification à deux facteurs</div>
+      <div style={{ color:G.muted, fontSize:"0.75rem", marginTop:2 }}>Un code email est requis à chaque connexion</div>
+    </div>
+    <div style={{ width:44, height:24, background:twoFAEnabled?G.teal:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
+      <div style={{ position:"absolute", top:3, left:twoFAEnabled?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
+    </div>
+  </div>
 </Card>
         </div>
       )}
