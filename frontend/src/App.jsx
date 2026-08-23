@@ -486,22 +486,26 @@ if (show2FA) return (
 };
 
 // ─── NAV ──────────────────────────────────────────────────────
-const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange  }) => {
+const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange }) => {
   const isParent = user.role === "parent";
+  const t = useTranslation(lang);
+
   const navItems = isParent
-  ? [
-    
-      { id:"home",     label:"Accueil",     icon:"🏠" },
-      { id:"missions", label:"Mes missions", icon:"📋" },
-      { id:"profile",  label:"Mon profil",   icon:"👤" },
-      { id:"camera",   label:"Flux caméra",  icon:"📹" },
-     { id:"search",  label:"Babysitters", icon:"🔍" },
-      { id:"map",     label:"Carte",       icon:"🗺️" },
-      { id:"bookings",label:"Mes gardes",  icon:"📋" },
-      { id:"camera",  label:"Caméra live", icon:"📹" },
-    ]
-  : [
-    ];
+    ? [
+        { id:"home",     label:t('home'),     icon:"🏠" },
+        { id:"search",   label:t('search'),   icon:"🔍" },
+        { id:"map",      label:t('map'),       icon:"🗺️" },
+        { id:"bookings", label:t('bookings'),  icon:"📋" },
+        { id:"profile",  label:t('profile'),   icon:"👤" },
+        { id:"camera",   label:t('camera'),    icon:"📹" },
+      ]
+    : [
+        { id:"home",     label:t('home'),      icon:"🏠" },
+        { id:"missions", label:t('missions'),  icon:"📋" },
+        { id:"profile",  label:t('profile'),   icon:"👤" },
+        { id:"camera",   label:t('camera'),    icon:"📹" },
+      ];
+
   return (
     <nav style={{ position:"fixed", top:0, left:0, right:0, height:G.navH, background:G.panel, borderBottom:`1px solid ${G.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", zIndex:100, boxShadow:"0 2px 20px #0005" }}>
       <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.25rem", color:"#fff" }}>
@@ -521,25 +525,22 @@ const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange  }) => {
         <div style={{ display:"flex", alignItems:"center", gap:8, background:G.card, borderRadius:10, padding:"7px 12px", border:`1px solid ${G.border}` }}>
           <span style={{ fontSize:"1.3rem" }}>{user.avatar}</span>
           <div>
-            <div style={{ fontSize:"0.78rem", fontWeight:600, color:G.text }}>{user.name.split(" ")[0]}</div>
+            <div style={{ fontSize:"0.78rem", fontWeight:600, color:G.text }}>{user.name?.split(" ")[0]}</div>
             <div style={{ fontSize:"0.65rem", color:G.muted }}>{user.email}</div>
           </div>
         </div>
-        <select
-  value={lang}
-  onChange={e => onLangChange(e.target.value)}
-  style={{ background:G.card, border:`1px solid ${G.border}`, color:G.text, borderRadius:8, padding:"6px 10px", fontFamily:"'Inter',sans-serif", fontSize:"0.82rem", cursor:"pointer", outline:"none" }}
->
-  <option value="fr">🇫🇷 FR</option>
-  <option value="en">🇬🇧 EN</option>
-  <option value="ar">🇸🇦 AR</option>
-</select>
-        <button onClick={onLogout} style={{ background:"rgba(255,95,87,0.12)", border:"1px solid rgba(255,95,87,0.25)", color:G.coral, padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:"0.78rem", fontWeight:600 }}>Déconnexion</button>
+        <select value={lang} onChange={e => onLangChange(e.target.value)} style={{ background:G.card, border:`1px solid ${G.border}`, color:G.text, borderRadius:8, padding:"6px 10px", fontFamily:"'Inter',sans-serif", fontSize:"0.82rem", cursor:"pointer", outline:"none" }}>
+          <option value="fr">🇫🇷 FR</option>
+          <option value="en">🇬🇧 EN</option>
+          <option value="ar">🇸🇦 AR</option>
+        </select>
+        <button onClick={onLogout} style={{ background:"rgba(255,95,87,0.12)", border:"1px solid rgba(255,95,87,0.25)", color:G.coral, padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:"0.78rem", fontWeight:600 }}>
+          {t('logout')}
+        </button>
       </div>
     </nav>
   );
 };
-
 // ─── PARENT HOME ──────────────────────────────────────────────
 const ParentHome = ({ user, bookings, onNav }) => {
   const myBookings = bookings.filter(b => b.parentId === user.id);
