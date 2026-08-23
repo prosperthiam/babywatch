@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 // v2.1 - fix sitter profile
-const API = 'https://babywatch-production.up.railway.app/api';
 import { translations, useTranslation } from './translations.js';
+const API = 'https://babywatch-production.up.railway.app/api';
 
 const USERS = {
   "parent@demo.fr":   { password: "demo123", role: "parent",   name: "Sophie Dupont",    avatar: "👩‍👧", id: "P001" },
@@ -1158,24 +1158,7 @@ const SitterProfile = ({ user, bookings, showToast }) => {
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState("unverified");
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
-
-const toggleTwoFA = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const res = await fetch(`${API}/auth/toggle-2fa`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setTwoFAEnabled(data.enabled);
-      showToast(data.message, "ok");
-    }
-  } catch(e) {
-    showToast("❌ Erreur de connexion.", "err");
-  }
-};
+ 
  
   
   // Champs du profil
@@ -2274,44 +2257,48 @@ const PaymentModal = ({ booking, onClose, onSuccess, showToast }) => {
 
 // ─── MAIN APP ─────────────────────────────────────────────────
 export default function App() {
-  useEffect(() => {
-  const initPush = async () => {
-    try {
-      const { PushNotifications } = await import('@capacitor/push-notifications');
-      await PushNotifications.requestPermissions();
-      await PushNotifications.register();
-      PushNotifications.addListener('registration', token => {
-        console.log('Push token:', token.value);
-        // Envoyer le token au backend
-        const authToken = localStorage.getItem('token');
-        if (authToken) {
-          fetch(`${API}/notifications/register-token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
-            body: JSON.stringify({ pushToken: token.value })
-          }).catch(console.error);
-        }
-      });
-      PushNotifications.addListener('pushNotificationReceived', notification => {
-        console.log('Notification reçue:', notification);
-      });
-    } catch(e) {
-      console.log('Push non disponible sur web');
-    }
-  };
-  if (user) initPush();
-}, [user]);
   const [user, setUser] = useState(null);
   const [page, setPage] = useState("home");
   const [bookings, setBookings] = useState(BOOKINGS_INIT);
   const [toast, showToast] = useToast();
+  const [lang, setLang] = useState(localStorage.getItem('lang') || 'fr');
+
+  const changeLang = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem('lang', newLang);
+  };
+
+  useEffect(() => {
+    const initPush = async () => {
+      try {
+        const { PushNotifications } = await import('@capacitor/push-notifications');
+        await PushNotifications.requestPermissions();
+        await PushNotifications.register();
+        PushNotifications.addListener('registration', token => {
+          const authToken = localStorage.getItem('token');
+          if (authToken) {
+            fetch(`${API}/notifications/register-token`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authToken}` },
+              body: JSON.stringify({ pushToken: token.value })
+            }).catch(console.error);
+          }
+        });
+        PushNotifications.addListener('pushNotificationReceived', notification => {
+          console.log('Notification reçue:', notification);
+        });
+      } catch(e) {
+        console.log('Push non disponible sur web');
+      }
+    };
+    if (user) initPush();
+  }, [user]);
 
   const handleLogin  = (u) => { setUser(u); setPage("home"); window.history.pushState({}, "", "/"); };
-  const handleLogout = ()  => { setUser(null); setPage("home"); };
+  const handleLogout = ()  => { setUser(null); setPage("home"); localStorage.removeItem('token'); };
 
   const isConfirmPage = window.location.pathname === "/confirm" || (window.location.search.includes("token=") && !window.location.pathname.includes("reset"));
   const isResetPage   = window.location.pathname === "/reset-password" || (window.location.search.includes("token=") && window.location.pathname.includes("reset"));
-
 
   if (isConfirmPage) return (
     <>
@@ -2327,12 +2314,13 @@ export default function App() {
     </>
   );
 
+  if (user?.role === "admin") return <AdminDashboard user={user} onLogout={handleLogout} />;
+
   const addBooking     = (b)  => setBookings(prev => [{ ...b, parentId:user.id, parentName:user.name }, ...prev]);
   const cancelBooking  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Réservation annulée.", "err"); };
   const acceptMission  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"confirmed"} : b)); showToast("✅ Mission acceptée !", "ok"); };
   const declineMission = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Mission refusée.", "err"); };
   const addReview      = (id, rating, review) => { setBookings(prev => prev.map(b => b.id===id?{...b,rating,review}:b)); showToast("⭐ Avis publié avec succès !", "ok"); };
-
 
   if (!user) return (
     <>
@@ -2357,19 +2345,16 @@ export default function App() {
     if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview}/>;
     if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast}/>;
     if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission}/>;
-    if (page==="profile")  return <SitterProfile user={user} bookings={bookings} showToast={showToast}/>;
     if (page==="camera")   return <CameraPage user={user}/>;
-  
-  return null;
-    
-};
+    return null;
+  };
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        body{font-family:'Inter',sans-serif;background:#0f1923;color:#e2e8f0}
-        body { direction: ${lang === 'ar' ? 'rtl' : 'ltr'}; text-align: ${lang === 'ar' ? 'right' : 'left'}; }
+        body{font-family:'Inter',sans-serif;background:#0f1923;color:#e2e8f0;direction:${lang==='ar'?'rtl':'ltr'};text-align:${lang==='ar'?'right':'left'}}
         input,select,textarea{color:#e2e8f0!important}
         input:focus,select:focus,textarea:focus{border-color:#2dd4bf!important;outline:none!important}
         @keyframes bw-blink{50%{opacity:0}}
@@ -2378,7 +2363,8 @@ export default function App() {
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
         select option{background:#162030}
       `}</style>
-        <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout} lang={lang} onLangChange={changeLang}/>      <main style={{ paddingTop:64, minHeight:"100vh" }}>
+      <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout} lang={lang} onLangChange={changeLang}/>
+      <main style={{ paddingTop:64, minHeight:"100vh" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", padding:"32px 24px" }}>
           {renderPage()}
         </div>
@@ -2386,4 +2372,4 @@ export default function App() {
       <Toast toast={toast}/>
     </>
   );
-  }
+}
