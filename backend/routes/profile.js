@@ -138,9 +138,9 @@ router.post('/sitter/upload-id', auth, async (req, res) => {
 router.get('/parent', auth, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT first_name, last_name, email, phone, address, 
+      `SELECT first_name, last_name, email, phone, address,
               postal_code, city, country, birth_date, birth_place,
-              latitude, longitude
+              latitude, longitude, two_factor_enabled
        FROM users WHERE id = $1`,
       [req.userId]
     );

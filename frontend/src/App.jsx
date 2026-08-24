@@ -625,7 +625,7 @@ const ParentHome = ({ user, bookings, onNav, t = (k) => k }) => {
   );
 };
 // ─── PARENT PROFILE ───────────────────────────────────────────
-const ParentProfile = ({ user, showToast }) => {
+const ParentProfile = ({ user, showToast, t }) => {
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
   const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
@@ -646,97 +646,145 @@ const ParentProfile = ({ user, showToast }) => {
         if (data.first_name) setFirstName(data.first_name);
         if (data.last_name) setLastName(data.last_name);
         if (data.phone) setPhone(data.phone || "");
-        if (data.address) setAddress(data.address || "");
+        if (data.address) setconst ParentProfile = ({ user, showToast, t = (k) => k }) => {
+  const [saving, setSaving] = useState(false);
+  const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
+  const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("France");
+  const [birthDate, setBirthDate] = useState("");
+  const [birthPlace, setBirthPlace] = useState("");
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/profile/parent`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (data.first_name)  setFirstName(data.first_name);
+        if (data.last_name)   setLastName(data.last_name);
+        if (data.phone)       setPhone(data.phone || "");
+        if (data.address)     setAddress(data.address || "");
         if (data.postal_code) setPostalCode(data.postal_code || "");
-        if (data.city) setCity(data.city || "");
-        if (data.country) setCountry(data.country || "France");
-        if (data.birth_date) setBirthDate(data.birth_date?.slice(0,10) || "");
+        if (data.city)        setCity(data.city || "");
+        if (data.country)     setCountry(data.country || "France");
+        if (data.birth_date)  setBirthDate(data.birth_date?.slice(0,10) || "");
         if (data.birth_place) setBirthPlace(data.birth_place || "");
-      }).catch(console.error);
+        if (data.two_factor_enabled !== undefined) setTwoFAEnabled(data.two_factor_enabled);
+      })
+      .catch(console.error);
   }, []);
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API}/profile/parent`, {
-        method:'PUT', headers:{'Content-Type':'application/json','Authorization':`Bearer ${token}`},
-        body:JSON.stringify({ firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace })
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: JSON.stringify({ firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace })
       });
       const data = await res.json();
-      if (res.ok) showToast("✅ Profil mis à jour !", "ok");
+      if (res.ok) showToast("✅ " + t('profileUpdated'), "ok");
       else showToast("❌ " + data.error, "err");
-    } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
     setSaving(false);
   };
-  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
 
-const toggleTwoFA = async () => {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API}/auth/toggle-2fa`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  const data = await res.json();
-  if (res.ok) { setTwoFAEnabled(data.enabled); showToast(data.message, "ok"); }
-};
+  const toggleTwoFA = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/auth/toggle-2fa`, {
+        method:'POST',
+        headers:{ 'Authorization':`Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) { setTwoFAEnabled(data.enabled); showToast("✅ " + data.message, "ok"); }
+      else showToast("❌ " + data.error, "err");
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
+  };
+
   return (
     <div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
         <div>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>👤 Mon profil</div>
-          <div style={{ color:G.muted, fontSize:"0.85rem" }}>Gérez vos informations personnelles</div>
-        </div>
-        <Btn onClick={handleSave} variant="teal" disabled={saving}>{saving?"Sauvegarde…":"💾 Sauvegarder"}</Btn>
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
-        <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>👤 Informations personnelles</div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-            <Input label="Prénom" value={firstName} onChange={setFirstName} placeholder="Sophie" />
-            <Input label="Nom" value={lastName} onChange={setLastName} placeholder="Dupont" />
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>
+            {t('myProfile')}
           </div>
-          <Input label="Téléphone" value={phone} onChange={setPhone} placeholder="+33 6 12 34 56 78" icon="📱" />
-          <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
-          <Input label="Lieu de naissance" value={birthPlace} onChange={setBirthPlace} placeholder="Paris, France" icon="📍" />
+          <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('profileSubtitle')}</div>
+        </div>
+        <Btn onClick={handleSave} variant="teal" disabled={saving}>
+          {saving ? t('saving') : t('save')}
+        </Btn>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+
+        <Card>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>
+            {t('personalInfo')}
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <Input label={t('firstName')} value={firstName} onChange={setFirstName} placeholder="Sophie" />
+            <Input label={t('lastName')}  value={lastName}  onChange={setLastName}  placeholder="Dupont" />
+          </div>
+          <Input label={t('phone')}      value={phone}      onChange={setPhone}      placeholder="+33 6 12 34 56 78" icon="📱" />
+          <Input label={t('birthDate')}  type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
+          <Input label={t('birthPlace')} value={birthPlace} onChange={setBirthPlace} placeholder="Paris, France" icon="📍" />
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Pays</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>
+              {t('country')}
+            </label>
             <select value={country} onChange={e=>setCountry(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
-              {["France","Belgique","Suisse","Canada","Maroc","Sénégal","Côte d'Ivoire","Algérie","Tunisie","Autre"].map(c => <option key={c} value={c}>{c}</option>)}
+              {["France","Belgique","Suisse","Canada","Maroc","Sénégal","Côte d'Ivoire","Algérie","Tunisie","Autre"].map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
             </select>
           </div>
         </Card>
+
         <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>🏠 Adresse complète</div>
-          <Input label="Adresse" value={address} onChange={setAddress} placeholder="12 rue de la Paix" icon="🏠" />
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>
+            {t('fullAddress')}
+          </div>
+          <Input label={t('address')} value={address} onChange={setAddress} placeholder="12 rue de la Paix" icon="🏠" />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:12 }}>
-            <Input label="Code postal" value={postalCode} onChange={setPostalCode} placeholder="75001" />
-            <Input label="Ville" value={city} onChange={setCity} placeholder="Paris" icon="📍" />
+            <Input label={t('postalCode')} value={postalCode} onChange={setPostalCode} placeholder="75001" />
+            <Input label={t('city')}       value={city}       onChange={setCity}       placeholder="Paris" icon="📍" />
           </div>
           <div style={{ background:G.teal+"11", border:`1px solid ${G.teal}33`, borderRadius:10, padding:14, marginTop:8 }}>
             <div style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.7 }}>
-              📍 Votre adresse est utilisée pour trouver les babysitters les plus proches. Elle n'est jamais partagée publiquement.
+              {t('addressPrivacy')}
             </div>
           </div>
         </Card>
+
       </div>
-    <Card style={{ marginTop:16 }}>
-  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>🔐 Sécurité</div>
-  <div onClick={toggleTwoFA} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", cursor:"pointer" }}>
-    <div style={{ flex:1 }}>
-      <div style={{ fontWeight:600, color:G.text, fontSize:"0.88rem" }}>Authentification à deux facteurs</div>
-      <div style={{ color:G.muted, fontSize:"0.75rem", marginTop:2 }}>Un code email est requis à chaque connexion</div>
+
+      <Card style={{ marginTop:16 }}>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>
+          {t('security')}
+        </div>
+        <div onClick={toggleTwoFA} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", cursor:"pointer" }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:600, color:G.text, fontSize:"0.88rem" }}>{t('twoFactor')}</div>
+            <div style={{ color:G.muted, fontSize:"0.75rem", marginTop:2 }}>{t('twoFactorDesc')}</div>
+          </div>
+          <div style={{ width:44, height:24, background: twoFAEnabled?G.teal:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
+            <div style={{ position:"absolute", top:3, left: twoFAEnabled?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
+          </div>
+        </div>
+      </Card>
     </div>
-    <div style={{ width:44, height:24, background:twoFAEnabled?G.teal:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
-      <div style={{ position:"absolute", top:3, left:twoFAEnabled?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
-    </div>
-  </div>
-</Card>
-</div>
   );
 };
 
 // ─── SEARCH ───────────────────────────────────────────────────
-const SearchSitters = ({ onBook, showToast, t }) => {
+  const SearchSitters = ({ onBook, showToast, t = (k) => k }) => {
   const [search, setSearch] = useState("");
   const [filterCam, setFilterCam] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -766,22 +814,35 @@ const SearchSitters = ({ onBook, showToast, t }) => {
   };
 
   const filtered = SITTERS_LIST.filter(s =>
-    (s.name.toLowerCase().includes(search.toLowerCase()) || s.city.toLowerCase().includes(search.toLowerCase()) || s.tags.some(t => t.toLowerCase().includes(search.toLowerCase()))) &&
+    (s.name.toLowerCase().includes(search.toLowerCase()) ||
+     s.city.toLowerCase().includes(search.toLowerCase()) ||
+     s.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))) &&
     (!filterCam || s.camera)
   );
 
-  if (selected) return <BookingForm sitter={selected} onBack={() => setSelected(null)} onConfirm={(b) => { onBook(b); setSelected(null); showToast("🎉 Demande envoyée !", "ok"); }} />;
+  if (selected) return <BookingForm sitter={selected} onBack={() => setSelected(null)} onConfirm={(b) => { onBook(b); setSelected(null); showToast("🎉 Demande envoyée !", "ok"); }} t={t} />;
 
   return (
     <div>
-      <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>Trouver un babysitter</div>
-      <div style={{ color:G.muted, fontSize:"0.88rem", marginBottom:20 }}>Tous nos babysitters sont vérifiés et certifiés.</div>
+      <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>
+        {t('findSitterTitle')}
+      </div>
+      <div style={{ color:G.muted, fontSize:"0.88rem", marginBottom:20 }}>
+        {t('allVerified')}
+      </div>
+
       <div style={{ display:"flex", gap:10, marginBottom:20 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍  Nom, ville, compétence…" style={{ flex:1, background:G.card, border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }} />
+        <input
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder={t('searchPlaceholder')}
+          style={{ flex:1, background:G.card, border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}
+        />
         <button onClick={() => setFilterCam(!filterCam)} style={{ padding:"10px 16px", borderRadius:10, border:`1.5px solid ${filterCam?G.teal:G.border}`, background:filterCam?G.teal+"22":"transparent", color:filterCam?G.teal:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.82rem", cursor:"pointer" }}>
-          📹 Caméra uniquement
+          {t('cameraOnly')}
         </button>
       </div>
+
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:16 }}>
         {filtered.map(s => (
           <Card key={s.id}>
@@ -792,23 +853,28 @@ const SearchSitters = ({ onBook, showToast, t }) => {
                   <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{s.name}</span>
                   {s.available ? <Dot color={G.green} pulse /> : <Dot color={G.muted} />}
                 </div>
-                <div style={{ color:G.muted, fontSize:"0.78rem" }}>🎂 {s.age} ans · 📍 {s.city}</div>
+                <div style={{ color:G.muted, fontSize:"0.78rem" }}>🎂 {s.age} {t('yearsOld')} · 📍 {s.city}</div>
               </div>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:G.teal, fontSize:"1.1rem" }}>{s.price}€<span style={{ fontSize:"0.65rem", color:G.muted }}>/h</span></div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:G.teal, fontSize:"1.1rem" }}>
+                {s.price}€<span style={{ fontSize:"0.65rem", color:G.muted }}>/h</span>
+              </div>
             </div>
+
             <div style={{ fontSize:"0.8rem", color:G.muted, marginBottom:12, lineHeight:1.5 }}>{s.bio}</div>
+
             <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:12 }}>
-              {s.tags.map(t => <Badge key={t} color={G.purple}>{t}</Badge>)}
-              {s.camera && <Badge color={G.teal}>📹 Caméra</Badge>}
+              {s.tags.map(tag => <Badge key={tag} color={G.purple}>{tag}</Badge>)}
+              {s.camera && <Badge color={G.teal}>📹 {t('cameraBadge')}</Badge>}
             </div>
+
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", borderTop:`1px solid ${G.border}`, paddingTop:12 }}>
-              <div style={{ fontSize:"0.82rem", color:G.muted }}>⭐ {s.rating} · {s.missions} gardes</div>
+              <div style={{ fontSize:"0.82rem", color:G.muted }}>⭐ {s.rating} · {s.missions} {t('bookingsCount')}</div>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <button onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }} style={{ background:"none", border:"none", fontSize:"1.3rem", cursor:"pointer", padding:4 }}>
                   {favorites.includes(s.id) ? "❤️" : "🤍"}
                 </button>
                 <Btn onClick={() => s.available && setSelected(s)} variant={s.available?"teal":"ghost"} size="sm" disabled={!s.available}>
-                  {s.available ? "Réserver →" : "Indisponible"}
+                  {s.available ? t('book') : t('unavailable')}
                 </Btn>
               </div>
             </div>
