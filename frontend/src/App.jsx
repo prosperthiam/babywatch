@@ -498,12 +498,14 @@ const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange }) => {
         { id:"bookings", label:t('bookings'),  icon:"📋" },
         { id:"profile",  label:t('profile'),   icon:"👤" },
         { id:"camera",   label:t('camera'),    icon:"📹" },
+        { id:"children", label:"Mes enfants", icon:"👶" },
       ]
     : [
         { id:"home",     label:t('home'),      icon:"🏠" },
         { id:"missions", label:t('missions'),  icon:"📋" },
         { id:"profile",  label:t('profile'),   icon:"👤" },
         { id:"camera",   label:t('camera'),    icon:"📹" },
+        { id:"children", label:"Mes enfants", icon:"👶" },
       ];
 const [unreadCount, setUnreadCount] = useState(0);
 
@@ -621,6 +623,237 @@ const ParentHome = ({ user, bookings, onNav, t = (k) => k }) => {
         ))}
         <button onClick={() => onNav("bookings")} style={{ marginTop:12, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>{t('seeAll')}</button>
       </Card>
+    </div>
+  );
+};
+
+// ─── CHILDREN MANAGER ─────────────────────────────────────────
+const CHILD_AVATARS = ["👶","🧒","👦","👧","🍼","🧸"];
+
+const ChildrenManager = ({ showToast }) => {
+  const [children, setChildren] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('token');
+
+  const load = () => {
+    fetch(`${API}/children`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { setChildren(Array.isArray(d)?d:[]); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+
+  useEffect(() => { if (token) load(); }, []);
+
+  const remove = async (id) => {
+    if (!confirm("Supprimer cette fiche enfant ?")) return;
+    await fetch(`${API}/children/${id}`, { method:'DELETE', headers:{ 'Authorization':`Bearer ${token}` } });
+    setChildren(prev => prev.filter(c => c.id !== id));
+    showToast("🗑 Fiche supprimée.", "err");
+  };
+
+  const age = (birthDate) => {
+    if (!birthDate) return null;
+    const diff = Date.now() - new Date(birthDate).getTime();
+    const years = Math.floor(diff / 31557600000);
+    if (years < 1) return `${Math.floor(diff / 2629800000)} mois`;
+    return `${years} an${years>1?'s':''}`;
+  };
+
+  if (editing !== null) return (
+    <ChildForm
+      child={editing}
+      onCancel={() => setEditing(null)}
+      onSaved={(saved) => {
+        setChildren(prev => editing.id ? prev.map(c => c.id===saved.id?saved:c) : [...prev, saved]);
+        setEditing(null);
+        showToast("✅ Fiche enregistrée !", "ok");
+      }}
+      showToast={showToast}
+    />
+  );
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>👶 Mes enfants</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem" }}>Ces informations sont transmises à la babysitter lors d'une garde</div>
+        </div>
+        <Btn onClick={() => setEditing({})} variant="teal">+ Ajouter un enfant</Btn>
+      </div>
+
+      {loading && <div style={{ color:G.muted, textAlign:"center", padding:30 }}>Chargement…</div>}
+
+      {!loading && children.length === 0 && (
+        <Card style={{ textAlign:"center", padding:40 }}>
+          <div style={{ fontSize:"3rem", marginBottom:12 }}>👶</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>Aucune fiche enfant</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Ajoutez vos enfants pour que les babysitters connaissent leurs besoins.</div>
+          <Btn onClick={() => setEditing({})} variant="teal">+ Créer ma première fiche</Btn>
+        </Card>
+      )}
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
+        {children.map(c => (
+          <Card key={c.id}>
+            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
+              <span style={{ fontSize:"2.5rem" }}>{c.avatar || "👶"}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"1.05rem" }}>{c.first_name}</div>
+                <div style={{ color:G.muted, fontSize:"0.78rem" }}>
+                  {age(c.birth_date) ? `🎂 ${age(c.birth_date)}` : ''}
+                  {c.bedtime ? ` · 🌙 ${c.bedtime.slice(0,5)}` : ''}
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={() => setEditing(c)} style={{ background:"rgba(255,255,255,0.06)", border:`1px solid ${G.border}`, color:G.text, borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:"0.75rem" }}>✏️</button>
+                <button onClick={() => remove(c.id)} style={{ background:"rgba(255,95,87,0.12)", border:"1px solid rgba(255,95,87,0.25)", color:G.coral, borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:"0.75rem" }}>🗑</button>
+              </div>
+            </div>
+
+            {c.allergies && (
+              <div style={{ background:"rgba(255,95,87,0.1)", border:`1px solid ${G.coral}33`, borderRadius:8, padding:"8px 12px", marginBottom:8 }}>
+                <div style={{ color:G.coral, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>⚠️ ALLERGIES</div>
+                <div style={{ color:G.text, fontSize:"0.8rem" }}>{c.allergies}</div>
+              </div>
+            )}
+            {c.medications && (
+              <div style={{ background:"rgba(251,191,36,0.1)", border:`1px solid ${G.amber}33`, borderRadius:8, padding:"8px 12px", marginBottom:8 }}>
+                <div style={{ color:G.amber, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>💊 MÉDICAMENTS</div>
+                <div style={{ color:G.text, fontSize:"0.8rem" }}>{c.medications}</div>
+              </div>
+            )}
+            {c.routines && (
+              <div style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.5, marginTop:6 }}>
+                <strong style={{ color:G.text }}>🔁 Routines :</strong> {c.routines}
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── CHILD FORM ───────────────────────────────────────────────
+const ChildForm = ({ child, onCancel, onSaved, showToast }) => {
+  const [firstName, setFirstName] = useState(child.first_name || "");
+  const [birthDate, setBirthDate] = useState(child.birth_date?.slice(0,10) || "");
+  const [gender, setGender] = useState(child.gender || "");
+  const [avatar, setAvatar] = useState(child.avatar || "👶");
+  const [allergies, setAllergies] = useState(child.allergies || "");
+  const [medicalNotes, setMedicalNotes] = useState(child.medical_notes || "");
+  const [medications, setMedications] = useState(child.medications || "");
+  const [routines, setRoutines] = useState(child.routines || "");
+  const [favoriteActivities, setFavoriteActivities] = useState(child.favorite_activities || "");
+  const [fears, setFears] = useState(child.fears || "");
+  const [bedtime, setBedtime] = useState(child.bedtime?.slice(0,5) || "");
+  const [doctorName, setDoctorName] = useState(child.doctor_name || "");
+  const [doctorPhone, setDoctorPhone] = useState(child.doctor_phone || "");
+  const [emergencyContactName, setEmergencyContactName] = useState(child.emergency_contact_name || "");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(child.emergency_contact_phone || "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!firstName.trim()) { showToast("⚠️ Le prénom est obligatoire.", "err"); return; }
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const body = { firstName, birthDate, gender, avatar, allergies, medicalNotes, medications,
+        routines, favoriteActivities, fears, bedtime, doctorName, doctorPhone,
+        emergencyContactName, emergencyContactPhone };
+      const res = await fetch(child.id ? `${API}/children/${child.id}` : `${API}/children`, {
+        method: child.id ? 'PUT' : 'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) onSaved(data);
+      else showToast("❌ " + data.error, "err");
+    } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      <button onClick={onCancel} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", marginBottom:18 }}>← Retour</button>
+
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>
+          {child.id ? "✏️ Modifier la fiche" : "👶 Nouvelle fiche enfant"}
+        </div>
+        <Btn onClick={save} variant="teal" disabled={saving}>{saving?"Enregistrement…":"💾 Enregistrer"}</Btn>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+
+        <Card>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>👶 Identité</div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>Avatar</label>
+            <div style={{ display:"flex", gap:8 }}>
+              {CHILD_AVATARS.map(a => (
+                <button key={a} onClick={() => setAvatar(a)} style={{ fontSize:"1.6rem", background: avatar===a?G.teal+"22":"rgba(255,255,255,0.04)", border:`2px solid ${avatar===a?G.teal:G.border}`, borderRadius:10, padding:"6px 10px", cursor:"pointer" }}>{a}</button>
+              ))}
+            </div>
+          </div>
+          <Input label="Prénom *" value={firstName} onChange={setFirstName} placeholder="Emma" />
+          <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Genre</label>
+            <select value={gender} onChange={e=>setGender(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
+              <option value="">Non précisé</option>
+              <option value="fille">Fille</option>
+              <option value="garcon">Garçon</option>
+            </select>
+          </div>
+          <Input label="Heure du coucher" type="time" value={bedtime} onChange={setBedtime} icon="🌙" />
+        </Card>
+
+        <Card style={{ borderColor:G.coral+"33" }}>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>⚕️ Santé & Sécurité</div>
+          <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:16 }}>Informations critiques transmises à la babysitter</div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.coral, marginBottom:6 }}>⚠️ Allergies</label>
+            <textarea value={allergies} onChange={e=>setAllergies(e.target.value)} placeholder="Arachides, lactose, pollen…" style={{ width:"100%", background:"rgba(255,95,87,0.06)", border:`1.5px solid ${G.coral}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.amber, marginBottom:6 }}>💊 Médicaments</label>
+            <textarea value={medications} onChange={e=>setMedications(e.target.value)} placeholder="Ventoline si toux · 1 dose max" style={{ width:"100%", background:"rgba(251,191,36,0.06)", border:`1.5px solid ${G.amber}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>🏥 Notes médicales</label>
+            <textarea value={medicalNotes} onChange={e=>setMedicalNotes(e.target.value)} placeholder="Asthme léger, port de lunettes…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>🔁 Habitudes</div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Routines</label>
+            <textarea value={routines} onChange={e=>setRoutines(e.target.value)} placeholder="Biberon à 19h, histoire avant de dormir, veilleuse allumée…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:70 }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>🎨 Activités préférées</label>
+            <textarea value={favoriteActivities} onChange={e=>setFavoriteActivities(e.target.value)} placeholder="Dessin, puzzles, jouer dehors…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>😰 Peurs / À éviter</label>
+            <textarea value={fears} onChange={e=>setFears(e.target.value)} placeholder="Peur du noir, n'aime pas les chiens…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+        </Card>
+
+        <Card style={{ borderColor:G.green+"33" }}>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>📞 Contacts d'urgence</div>
+          <Input label="Nom du médecin" value={doctorName} onChange={setDoctorName} placeholder="Dr. Martin" icon="🩺" />
+          <Input label="Téléphone du médecin" value={doctorPhone} onChange={setDoctorPhone} placeholder="+33 1 23 45 67 89" icon="📞" />
+          <div style={{ height:1, background:G.border, margin:"6px 0 16px" }} />
+          <Input label="Contact d'urgence (nom)" value={emergencyContactName} onChange={setEmergencyContactName} placeholder="Grand-mère Nicole" icon="👤" />
+          <Input label="Contact d'urgence (téléphone)" value={emergencyContactPhone} onChange={setEmergencyContactPhone} placeholder="+33 6 12 34 56 78" icon="📞" />
+        </Card>
+
+      </div>
     </div>
   );
 };
@@ -891,7 +1124,17 @@ const BookingForm = ({ sitter, onBack, onConfirm }) => {
   const [date, setDate] = useState(tomorrow.toISOString().slice(0,10));
   const [time, setTime] = useState("18:30");
   const [duration, setDuration] = useState("3");
-  const [children, setChildren] = useState("1");
+  const [myChildren, setMyChildren] = useState([]);
+const [selectedChildren, setSelectedChildren] = useState([]);
+
+useEffect(() => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  fetch(`${API}/children`, { headers:{ 'Authorization':`Bearer ${token}` } })
+    .then(r => r.json())
+    .then(d => setMyChildren(Array.isArray(d)?d:[]))
+    .catch(console.error);
+}, []);
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [camera, setCamera] = useState(sitter.camera);
@@ -933,6 +1176,28 @@ const BookingForm = ({ sitter, onBack, onConfirm }) => {
     showToast={() => {}}
   />
 )}
+<div style={{ marginBottom:20 }}>
+  <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>👶 Enfants à garder</label>
+  {myChildren.length === 0 ? (
+    <div style={{ background:G.night, border:`1px dashed ${G.border}`, borderRadius:10, padding:"14px", fontSize:"0.82rem", color:G.muted, textAlign:"center" }}>
+      Aucune fiche enfant. Créez-en une dans l'onglet 👶 Mes enfants.
+    </div>
+  ) : (
+    <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+      {myChildren.map(c => {
+        const on = selectedChildren.includes(c.id);
+        return (
+          <button key={c.id} onClick={() => setSelectedChildren(prev => on ? prev.filter(i=>i!==c.id) : [...prev, c.id])}
+            style={{ display:"flex", alignItems:"center", gap:8, background: on?G.teal+"22":"rgba(255,255,255,0.04)", border:`2px solid ${on?G.teal:G.border}`, borderRadius:12, padding:"8px 14px", cursor:"pointer", color: on?G.teal:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem" }}>
+            <span style={{ fontSize:"1.3rem" }}>{c.avatar||"👶"}</span>
+            {c.first_name}
+            {c.allergies && <span title="Allergies" style={{ fontSize:"0.7rem" }}>⚠️</span>}
+          </button>
+        );
+      })}
+    </div>
+  )}
+</div>
 <Btn onClick={() => { if(!address){alert("Renseignez l'adresse."); return;} setShowPayment(true); }} variant="teal" size="lg" full>
   💳 Procéder au paiement →
 </Btn>
@@ -1723,7 +1988,7 @@ const toggleTwoFA = async () => {
 </Card>
         </div>
       )}
-
+{tab === "availability" && <AvailabilityCalendar showToast={showToast} />}
       {/* ── TAB IDENTITÉ ── */}
       {tab === "identity" && (
         <div style={{ maxWidth:600 }}>
@@ -2752,6 +3017,7 @@ export default function App() {
   if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast} t={t}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast} t={t}/>;
   if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission} t={t}/>;
   if (page==="camera")   return <CameraPage user={user} t={t}/>;
+  if (page==="children") return <ChildrenManager showToast={showToast}/>;
   return null;
 };
 
