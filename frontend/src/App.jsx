@@ -505,6 +505,22 @@ const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange }) => {
         { id:"profile",  label:t('profile'),   icon:"👤" },
         { id:"camera",   label:t('camera'),    icon:"📹" },
       ];
+const [unreadCount, setUnreadCount] = useState(0);
+
+useEffect(() => {
+  const token = localStorage.getItem('token');
+  if (!token) return;
+  const fetchUnread = () => {
+    fetch(`${API}/chat/unread/count`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setUnreadCount(data.count || 0))
+      .catch(console.error);
+  };
+  fetchUnread();
+  const interval = setInterval(fetchUnread, 30000);
+  return () => clearInterval(interval);
+}, []);
+    
 
   return (
     <nav style={{ position:"fixed", top:0, left:0, right:0, height:G.navH, background:G.panel, borderBottom:`1px solid ${G.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", zIndex:100, boxShadow:"0 2px 20px #0005" }}>
@@ -542,27 +558,27 @@ const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange }) => {
   );
 };
 // ─── PARENT HOME ──────────────────────────────────────────────
-const ParentHome = ({ user, bookings, onNav }) => {
+const ParentHome = ({ user, bookings, onNav, t = (k) => k }) => {
   const myBookings = bookings.filter(b => b.parentId === user.id);
   const upcoming = myBookings.filter(b => b.status==="confirmed"||b.status==="pending");
   const next = upcoming[0];
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
       <div style={{ background:"linear-gradient(135deg,#1a2d45,#0f1f35)", borderRadius:18, padding:"32px 28px", border:`1px solid ${G.border}` }}>
-        <div style={{ fontSize:"0.78rem", fontWeight:700, color:G.teal, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>Bonjour 👋</div>
+        <div style={{ fontSize:"0.78rem", fontWeight:700, color:G.teal, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>{t('hello')}</div>
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.8rem", color:"#fff", marginBottom:6 }}>{user.name}</div>
-        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:20 }}>Votre espace parent BabyWatch — gérez vos gardes et surveillez en direct.</div>
+        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:20 }}>{t('parentWelcome')}</div>
         <div style={{ display:"flex", gap:10 }}>
-          <Btn onClick={() => onNav("search")} variant="teal">🔍 Trouver un babysitter</Btn>
-          <Btn onClick={() => onNav("camera")} variant="ghost">📹 Caméra live</Btn>
+          <Btn onClick={() => onNav("search")} variant="teal">{t('findSitter')}</Btn>
+          <Btn onClick={() => onNav("camera")} variant="ghost">{t('liveCamera')}</Btn>
         </div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
         {[
-          { label:"Gardes à venir",     val:upcoming.length,                                    icon:"📅", color:G.teal   },
-          { label:"En attente",         val:myBookings.filter(b=>b.status==="pending").length,   icon:"⏳", color:G.amber  },
-          { label:"Gardes effectuées",  val:myBookings.filter(b=>b.status==="completed").length, icon:"✅", color:G.green  },
-          { label:"Babysitters favoris",val:2,                                                   icon:"⭐", color:G.purple },
+          { label:t('upcomingBookings'),  val:upcoming.length,                                    icon:"📅", color:G.teal   },
+          { label:t('pending'),           val:myBookings.filter(b=>b.status==="pending").length,   icon:"⏳", color:G.amber  },
+          { label:t('completedBookings'), val:myBookings.filter(b=>b.status==="completed").length, icon:"✅", color:G.green  },
+          { label:t('favoriteSitters'),   val:2,                                                   icon:"⭐", color:G.purple },
         ].map(s => (
           <Card key={s.label} style={{ textAlign:"center" }}>
             <div style={{ fontSize:"1.8rem", marginBottom:6 }}>{s.icon}</div>
@@ -574,14 +590,14 @@ const ParentHome = ({ user, bookings, onNav }) => {
       {next && (
         <Card>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>Prochaine garde</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{t('nextBooking')}</div>
             <StatusBadge status={next.status} />
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:16 }}>
             <span style={{ fontSize:"2.5rem" }}>{next.sitterAvatar}</span>
             <div style={{ flex:1 }}>
               <div style={{ fontWeight:600, color:"#fff", marginBottom:3 }}>{next.sitterName}</div>
-              <div style={{ color:G.muted, fontSize:"0.82rem" }}>📅 {next.date} à {next.time} · ⏱ {next.duration} · 👶 {next.children} enfant{next.children>1?"s":""}</div>
+              <div style={{ color:G.muted, fontSize:"0.82rem" }}>📅 {next.date} · {next.time} · ⏱ {next.duration} · 👶 {next.children}</div>
               <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:2 }}>📍 {next.address}</div>
             </div>
             {next.camera && <Btn onClick={() => onNav("camera")} variant="teal" size="sm">📹 Live</Btn>}
@@ -589,7 +605,7 @@ const ParentHome = ({ user, bookings, onNav }) => {
         </Card>
       )}
       <Card>
-        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Historique récent</div>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>{t('recentHistory')}</div>
         {myBookings.filter(b=>b.status==="completed").slice(0,3).map(b => (
           <div key={b.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
             <span style={{ fontSize:"1.5rem" }}>{b.sitterAvatar}</span>
@@ -603,12 +619,11 @@ const ParentHome = ({ user, bookings, onNav }) => {
             </div>
           </div>
         ))}
-        <button onClick={() => onNav("bookings")} style={{ marginTop:12, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>Voir tout →</button>
+        <button onClick={() => onNav("bookings")} style={{ marginTop:12, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>{t('seeAll')}</button>
       </Card>
     </div>
   );
 };
-
 // ─── PARENT PROFILE ───────────────────────────────────────────
 const ParentProfile = ({ user, showToast }) => {
   const [saving, setSaving] = useState(false);
@@ -721,7 +736,7 @@ const toggleTwoFA = async () => {
 };
 
 // ─── SEARCH ───────────────────────────────────────────────────
-const SearchSitters = ({ onBook, showToast }) => {
+const SearchSitters = ({ onBook, showToast, t }) => {
   const [search, setSearch] = useState("");
   const [filterCam, setFilterCam] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -1002,6 +1017,7 @@ const ParentBookings = ({ user, bookings, onCancel, onNav, onReview }) => {
   const my = bookings.filter(b => b.parentId === user.id);
   const tabs = [["all","Toutes"],["pending","En attente"],["confirmed","Confirmées"],["completed","Terminées"]];
   const filtered = filter==="all" ? my : my.filter(b=>b.status===filter);
+const [chatBooking, setChatBooking] = useState(null);
 
   return (
     <div>
@@ -1015,7 +1031,13 @@ const ParentBookings = ({ user, bookings, onCancel, onNav, onReview }) => {
           }}
         />
       )}
-
+{chatBooking && (
+  <ChatModal
+    booking={chatBooking}
+    user={user}
+    onClose={() => setChatBooking(null)}
+  />
+)}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
           <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>Mes gardes</div>
@@ -1136,6 +1158,7 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
   const my = bookings.filter(b => b.sitterId === user.id);
   const tabs = [["all","Toutes"],["pending","À confirmer"],["confirmed","Confirmées"],["completed","Terminées"]];
   const filtered = filter==="all" ? my : my.filter(b=>b.status===filter);
+  const [chatBooking, setChatBooking] = useState(null);
   return (
     <div>
       <div style={{ marginBottom:20 }}>
@@ -1178,6 +1201,13 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
       </div>
     </div>
   );
+  {chatBooking && (
+  <ChatModal
+    booking={chatBooking}
+    user={user}
+    onClose={() => setChatBooking(null)}
+  />
+)}
 };
 
 // ─── SITTER PROFILE ───────────────────────────────────────────
@@ -2283,6 +2313,131 @@ const PaymentModal = ({ booking, onClose, onSuccess, showToast }) => {
   );
 };
 
+// ─── CHAT MODAL ───────────────────────────────────────────────
+const ChatModal = ({ booking, user, onClose }) => {
+  const [messages, setMessages] = useState([]);
+  const [newMsg, setNewMsg] = useState("");
+  const [loading, setLoading] = useState(true);
+  const messagesEndRef = useRef(null);
+  const token = localStorage.getItem('token');
+  const receiverId = user.role === 'parent' ? booking.sitterId : booking.parentId;
+
+  useEffect(() => {
+    fetch(`${API}/chat/${booking.id}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+    .then(r => r.json())
+    .then(data => { setMessages(Array.isArray(data) ? data : []); setLoading(false); })
+    .catch(() => setLoading(false));
+  }, [booking.id]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!newMsg.trim()) return;
+    const tempMsg = {
+      id: Date.now(),
+      content: newMsg,
+      sender_id: user.id,
+      sender_name: user.name,
+      sender_role: user.role,
+      created_at: new Date().toISOString(),
+      pending: true
+    };
+    setMessages(prev => [...prev, tempMsg]);
+    setNewMsg("");
+    try {
+      const res = await fetch(`${API}/chat/${booking.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ content: newMsg, receiverId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setMessages(prev => prev.map(m => m.id === tempMsg.id ? data : m));
+      }
+    } catch(e) { console.error(e); }
+  };
+
+  const isMe = (msg) => msg.sender_id === user.id || msg.sender_id === parseInt(user.id);
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.7)", backdropFilter:"blur(4px)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:500, height:"80vh", display:"flex", flexDirection:"column", overflow:"hidden", boxShadow:"0 24px 80px #0008" }}>
+
+        {/* Header */}
+        <div style={{ background:G.night, padding:"18px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <span style={{ fontSize:"1.8rem" }}>{user.role==="parent" ? booking.sitterAvatar || "👩" : "👨‍👧"}</span>
+            <div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"0.95rem" }}>
+                {user.role==="parent" ? booking.sitterName : booking.parentName}
+              </div>
+              <div style={{ color:G.green, fontSize:"0.72rem", display:"flex", alignItems:"center", gap:4 }}>
+                <Dot color={G.green} pulse /> En ligne
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.1)", border:"none", color:G.muted, width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:"1.1rem" }}>✕</button>
+        </div>
+
+        {/* Info réservation */}
+        <div style={{ background:G.card, padding:"10px 24px", borderBottom:`1px solid ${G.border}`, fontSize:"0.75rem", color:G.muted, flexShrink:0 }}>
+          📅 {booking.date} à {booking.time} · ⏱ {booking.duration} · 📍 {booking.address}
+        </div>
+
+        {/* Messages */}
+        <div style={{ flex:1, overflowY:"auto", padding:"16px 20px", display:"flex", flexDirection:"column", gap:8 }}>
+          {loading && <div style={{ textAlign:"center", color:G.muted, padding:20 }}>Chargement…</div>}
+          {!loading && messages.length===0 && (
+            <div style={{ textAlign:"center", color:G.muted, padding:40 }}>
+              <div style={{ fontSize:"2.5rem", marginBottom:12 }}>💬</div>
+              <div style={{ fontSize:"0.88rem" }}>Démarrez la conversation !</div>
+            </div>
+          )}
+          {messages.map(msg => (
+            <div key={msg.id} style={{ display:"flex", flexDirection:"column", alignItems:isMe(msg)?"flex-end":"flex-start" }}>
+              <div style={{
+                maxWidth:"75%",
+                background: isMe(msg) ? G.teal : G.card,
+                color: isMe(msg) ? "#0f1923" : G.text,
+                padding:"10px 14px",
+                borderRadius: isMe(msg) ? "14px 14px 2px 14px" : "14px 14px 14px 2px",
+                fontSize:"0.88rem",
+                lineHeight:1.5,
+                opacity: msg.pending ? 0.7 : 1,
+                border: isMe(msg) ? "none" : `1px solid ${G.border}`,
+              }}>
+                {msg.content}
+              </div>
+              <div style={{ fontSize:"0.65rem", color:G.muted, marginTop:3, paddingLeft:4, paddingRight:4 }}>
+                {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}
+                {msg.pending && " · Envoi…"}
+              </div>
+            </div>
+          ))}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Input */}
+        <div style={{ padding:"14px 20px", borderTop:`1px solid ${G.border}`, display:"flex", gap:10, flexShrink:0 }}>
+          <input
+            value={newMsg}
+            onChange={e => setNewMsg(e.target.value)}
+            onKeyPress={e => e.key==="Enter" && sendMessage()}
+            placeholder="Écrire un message…"
+            style={{ flex:1, background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:12, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}
+          />
+          <button onClick={sendMessage} disabled={!newMsg.trim()} style={{ background:G.teal, border:"none", borderRadius:12, width:44, height:44, cursor:newMsg.trim()?"pointer":"not-allowed", opacity:newMsg.trim()?1:0.4, fontSize:"1.1rem", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── MAIN APP ─────────────────────────────────────────────────
 export default function App() {
@@ -2366,17 +2521,18 @@ export default function App() {
   );
 
   const isParent = user.role === "parent";
+  const t = useTranslation(lang);
 
-  const renderPage = () => {
-    if (page==="home")     return isParent ? <ParentHome user={user} bookings={bookings} onNav={setPage}/> : <SitterHome user={user} bookings={bookings} onNav={setPage}/>;
-    if (page==="search")   return <SearchSitters onBook={addBooking} showToast={showToast}/>;
-    if (page==="map")      return <MapView user={user} showToast={showToast}/>;
-    if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview}/>;
-    if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast}/>;
-    if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission}/>;
-    if (page==="camera")   return <CameraPage user={user}/>;
-    return null;
-  };
+ const renderPage = () => {
+  if (page==="home")     return isParent ? <ParentHome user={user} bookings={bookings} onNav={setPage} t={t}/> : <SitterHome user={user} bookings={bookings} onNav={setPage} t={t}/>;
+  if (page==="search")   return <SearchSitters onBook={addBooking} showToast={showToast} t={t}/>;
+  if (page==="map")      return <MapView user={user} showToast={showToast} t={t}/>;
+  if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview} t={t}/>;
+  if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast} t={t}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast} t={t}/>;
+  if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission} t={t}/>;
+  if (page==="camera")   return <CameraPage user={user} t={t}/>;
+  return null;
+};
 
   return (
     <>
