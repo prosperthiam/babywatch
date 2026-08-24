@@ -39,6 +39,7 @@ app.use('/api/payments', require('./routes/payments'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/favorites', require('./routes/favorites'));
 app.use('/api/chat', (req, res, next) => { req.io = io; next(); }, require('./routes/chat'));
+app.use('/api/availability', require('./routes/availability'));
 
 app.get('/api/test', (req, res) => {
   res.json({ message: '✅ Serveur BabyWatch fonctionne !' });

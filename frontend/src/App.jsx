@@ -1276,6 +1276,161 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
 )}
 };
 
+// ─── AVAILABILITY CALENDAR ────────────────────────────────────
+const DAYS = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+const HOURS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00"];
+
+const AvailabilityCalendar = ({ showToast }) => {
+  const [slots, setSlots] = useState([]);
+  const [exceptions, setExceptions] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [blockDate, setBlockDate] = useState("");
+  const [blockReason, setBlockReason] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/availability/me`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        setSlots((data.slots||[]).map(s => ({ day:s.day_of_week, start:s.start_time.slice(0,5), end:s.end_time.slice(0,5) })));
+        setExceptions(data.exceptions||[]);
+      })
+      .catch(console.error);
+  }, []);
+
+  const isSelected = (day, hour) => slots.some(s => s.day===day && hour >= s.start && hour < s.end);
+
+  const toggleCell = (day, hour) => {
+    const nextHour = HOURS[HOURS.indexOf(hour)+1] || "23:59";
+    if (isSelected(day, hour)) {
+      setSlots(prev => prev.filter(s => !(s.day===day && hour >= s.start && hour < s.end)));
+    } else {
+      setSlots(prev => [...prev, { day, start:hour, end:nextHour }]);
+    }
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/availability/me`, {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: JSON.stringify({ slots })
+      });
+      const data = await res.json();
+      if (res.ok) showToast("✅ " + data.message, "ok");
+      else showToast("❌ " + data.error, "err");
+    } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
+    setSaving(false);
+  };
+
+  const blockDay = async () => {
+    if (!blockDate) { showToast("⚠️ Choisissez une date.", "err"); return; }
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/availability/exception`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: JSON.stringify({ date: blockDate, available:false, reason: blockReason })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setExceptions(prev => [...prev, { date: blockDate, available:false, reason: blockReason }]);
+        setBlockDate(""); setBlockReason("");
+        showToast("🚫 " + data.message, "ok");
+      }
+    } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
+  };
+
+  const removeException = async (date) => {
+    const token = localStorage.getItem('token');
+    await fetch(`${API}/availability/exception/${date}`, { method:'DELETE', headers:{ 'Authorization':`Bearer ${token}` } });
+    setExceptions(prev => prev.filter(e => e.date !== date));
+    showToast("✅ Date rouverte.", "ok");
+  };
+
+  const totalHours = slots.length;
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>📅 Mes disponibilités</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem" }}>Cliquez sur les créneaux où vous êtes disponible · {totalHours}h/semaine</div>
+        </div>
+        <Btn onClick={handleSave} variant="amber" disabled={saving}>{saving?"Sauvegarde…":"💾 Enregistrer"}</Btn>
+      </div>
+
+      {/* Grille hebdomadaire */}
+      <Card style={{ marginBottom:20, overflowX:"auto" }}>
+        <div style={{ display:"grid", gridTemplateColumns:`70px repeat(7, minmax(70px,1fr))`, gap:3, minWidth:600 }}>
+          <div />
+          {DAYS.map(d => (
+            <div key={d} style={{ textAlign:"center", fontSize:"0.7rem", fontWeight:700, color:G.muted, paddingBottom:6 }}>
+              {d.slice(0,3)}
+            </div>
+          ))}
+          {HOURS.slice(0,-1).map(hour => (
+            <>
+              <div key={"h"+hour} style={{ fontSize:"0.68rem", color:G.muted, textAlign:"right", paddingRight:8, alignSelf:"center" }}>{hour}</div>
+              {DAYS.map((_, dayIdx) => {
+                const on = isSelected(dayIdx, hour);
+                return (
+                  <div
+                    key={dayIdx+hour}
+                    onClick={() => toggleCell(dayIdx, hour)}
+                    style={{
+                      height:26,
+                      borderRadius:5,
+                      background: on ? G.green : "rgba(255,255,255,0.04)",
+                      border: `1px solid ${on ? G.green : G.border}`,
+                      cursor:"pointer",
+                      transition:"all 0.12s",
+                    }}
+                  />
+                );
+              })}
+            </>
+          ))}
+        </div>
+        <div style={{ display:"flex", gap:16, marginTop:14, fontSize:"0.72rem", color:G.muted }}>
+          <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ width:12, height:12, borderRadius:3, background:G.green, display:"inline-block" }} /> Disponible
+          </span>
+          <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ width:12, height:12, borderRadius:3, background:"rgba(255,255,255,0.04)", border:`1px solid ${G.border}`, display:"inline-block" }} /> Indisponible
+          </span>
+        </div>
+      </Card>
+
+      {/* Blocage de dates */}
+      <Card>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>🚫 Bloquer des dates</div>
+        <div style={{ color:G.muted, fontSize:"0.8rem", marginBottom:14 }}>Vacances, examens, indisponibilités ponctuelles…</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1.5fr auto", gap:10, alignItems:"end" }}>
+          <Input label="Date" type="date" value={blockDate} onChange={setBlockDate} />
+          <Input label="Raison (optionnel)" value={blockReason} onChange={setBlockReason} placeholder="Vacances" />
+          <div style={{ marginBottom:16 }}>
+            <Btn onClick={blockDay} variant="danger">🚫 Bloquer</Btn>
+          </div>
+        </div>
+        {exceptions.length > 0 && (
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:4 }}>
+            {exceptions.map(e => (
+              <span key={e.date} style={{ display:"inline-flex", alignItems:"center", gap:8, background:G.coral+"18", border:`1px solid ${G.coral}44`, color:G.coral, borderRadius:100, padding:"5px 12px", fontSize:"0.75rem", fontWeight:600 }}>
+                {new Date(e.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' })}
+                {e.reason ? ` · ${e.reason}` : ''}
+                <button onClick={() => removeException(e.date)} style={{ background:"none", border:"none", color:G.coral, cursor:"pointer", lineHeight:1 }}>×</button>
+              </span>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+};
 // ─── SITTER PROFILE ───────────────────────────────────────────
 const SitterProfile = ({ user, bookings, showToast }) => {
   const my = bookings.filter(b => b.sitterId === user.id && b.status === "completed");
@@ -1460,7 +1615,7 @@ const toggleTwoFA = async () => {
 
       {/* Tabs */}
       <div style={{ display:"flex", gap:6, marginBottom:24, borderBottom:`1px solid ${G.border}`, paddingBottom:0 }}>
-        {[["profile","👤 Mon profil"],["identity","🪪 Vérification identité"],["stats","📊 Mes statistiques"]].map(([id,label]) => (
+        {[["profile","👤 Mon profil"],["availability","📅 Disponibilités"],["identity","🪪 Vérification identité"],["stats","📊 Mes statistiques"]].map(([id,label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:"10px 18px", background:"none", border:"none", borderBottom: tab===id?`2px solid ${G.amber}`:"2px solid transparent", color: tab===id?G.amber:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem", cursor:"pointer", marginBottom:"-1px" }}>
             {label}
           </button>
