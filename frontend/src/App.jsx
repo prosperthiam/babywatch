@@ -858,28 +858,8 @@ const ChildForm = ({ child, onCancel, onSaved, showToast }) => {
   );
 };
 // ─── PARENT PROFILE ───────────────────────────────────────────
-const ParentProfile = ({ user, showToast, t }) => {
-  const [saving, setSaving] = useState(false);
-  const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
-  const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [city, setCity] = useState("");
-  const [country, setCountry] = useState("France");
-  const [birthDate, setBirthDate] = useState("");
-  const [birthPlace, setBirthPlace] = useState("");
-  useEffect(() => {
-   
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    fetch(`${API}/profile/parent`, { headers:{'Authorization':`Bearer ${token}`} })
-      .then(r => r.json())
-      .then(data => {
-        if (data.first_name) setFirstName(data.first_name);
-        if (data.last_name) setLastName(data.last_name);
-        if (data.phone) setPhone(data.phone || "");
-        if (data.address) setconst ParentProfile = ({ user, showToast, t = (k) => k }) => {
+// ─── PARENT PROFILE ───────────────────────────────────────────
+const ParentProfile = ({ user, showToast, t = (k) => k }) => {
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
   const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
@@ -1430,27 +1410,29 @@ const [chatBooking, setChatBooking] = useState(null);
 };
 
 // ─── SITTER HOME ──────────────────────────────────────────────
-const SitterHome = ({ user, bookings, onNav }) => {
+const SitterHome = ({ user, bookings, onNav, t = (k) => k }) => {
   const my = bookings.filter(b => b.sitterId === user.id);
   const upcoming = my.filter(b=>b.status==="confirmed"||b.status==="pending");
   const earnings = my.filter(b=>b.status==="completed").reduce((s,b)=>s+b.price,0);
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
       <div style={{ background:"linear-gradient(135deg,#1a2510,#0f1a0a)", borderRadius:18, padding:"32px 28px", border:`1px solid ${G.amber}33` }}>
-        <div style={{ fontSize:"0.78rem", fontWeight:700, color:G.amber, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>Bienvenue 👋</div>
+        <div style={{ fontSize:"0.78rem", fontWeight:700, color:G.amber, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>
+          {t('welcome')}
+        </div>
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.8rem", color:"#fff", marginBottom:6 }}>{user.name}</div>
-        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:20 }}>Votre espace babysitter — gérez vos missions.</div>
+        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:20 }}>{t('sitterWelcome')}</div>
         <div style={{ display:"flex", gap:10 }}>
-          <Btn onClick={() => onNav("missions")} variant="amber">📋 Mes missions</Btn>
-          <Btn onClick={() => onNav("profile")} variant="ghost">👤 Mon profil</Btn>
+          <Btn onClick={() => onNav("missions")} variant="amber">{t('myMissions')}</Btn>
+          <Btn onClick={() => onNav("profile")} variant="ghost">{t('myProfileBtn')}</Btn>
         </div>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
         {[
-          { label:"Missions à venir",   val:upcoming.length,                                  icon:"📅", color:G.amber },
-          { label:"En attente réponse", val:my.filter(b=>b.status==="pending").length,         icon:"⏳", color:G.coral },
-          { label:"Missions réalisées", val:my.filter(b=>b.status==="completed").length,       icon:"✅", color:G.green },
-          { label:"Gains ce mois",      val:earnings+"€",                                      icon:"💰", color:G.teal  },
+          { label:t('upcomingMissions'),   val:upcoming.length,                                  icon:"📅", color:G.amber },
+          { label:t('pendingResponse'),    val:my.filter(b=>b.status==="pending").length,         icon:"⏳", color:G.coral },
+          { label:t('completedMissions'),  val:my.filter(b=>b.status==="completed").length,       icon:"✅", color:G.green },
+          { label:t('monthEarnings'),      val:earnings+"€",                                      icon:"💰", color:G.teal  },
         ].map(s => (
           <Card key={s.label} style={{ textAlign:"center" }}>
             <div style={{ fontSize:"1.8rem", marginBottom:6 }}>{s.icon}</div>
@@ -1462,19 +1444,19 @@ const SitterHome = ({ user, bookings, onNav }) => {
       {upcoming[0] && (
         <Card>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>Prochaine mission</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{t('nextMission')}</div>
             <StatusBadge status={upcoming[0].status} />
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:14 }}>
             <span style={{ fontSize:"2rem" }}>👨‍👧</span>
             <div style={{ flex:1 }}>
               <div style={{ fontWeight:600, color:"#fff" }}>{upcoming[0].parentName}</div>
-              <div style={{ color:G.muted, fontSize:"0.82rem" }}>📅 {upcoming[0].date} à {upcoming[0].time} · ⏱ {upcoming[0].duration}</div>
+              <div style={{ color:G.muted, fontSize:"0.82rem" }}>📅 {upcoming[0].date} · {upcoming[0].time} · ⏱ {upcoming[0].duration}</div>
               <div style={{ color:G.muted, fontSize:"0.82rem" }}>📍 {upcoming[0].address}</div>
             </div>
             <div style={{ textAlign:"right" }}>
               <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:G.teal, fontSize:"1.2rem" }}>{upcoming[0].price}€</div>
-              {upcoming[0].camera && <Badge color={G.teal} style={{marginTop:6}}>📹 Caméra</Badge>}
+              {upcoming[0].camera && <Badge color={G.teal} style={{marginTop:6}}>📹 {t('cameraBadge')}</Badge>}
             </div>
           </div>
         </Card>
@@ -1482,7 +1464,6 @@ const SitterHome = ({ user, bookings, onNav }) => {
     </div>
   );
 };
-
 // ─── SITTER MISSIONS ──────────────────────────────────────────
 const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
   const [filter, setFilter] = useState("all");
