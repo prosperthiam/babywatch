@@ -631,6 +631,7 @@ const ParentHome = ({ user, bookings, onNav, t = (k) => k }) => {
 const CHILD_AVATARS = ["👶","🧒","👦","👧","🍼","🧸"];
 
 const ChildrenManager = ({ showToast, t = (k) => k }) => {
+  const [children, setChildren] = useState([]);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('token');
@@ -645,10 +646,10 @@ const ChildrenManager = ({ showToast, t = (k) => k }) => {
   useEffect(() => { if (token) load(); }, []);
 
   const remove = async (id) => {
-    if (!confirm("Supprimer cette fiche enfant ?")) return;
+    if (!confirm(t('confirmDeleteChild'))) return;
     await fetch(`${API}/children/${id}`, { method:'DELETE', headers:{ 'Authorization':`Bearer ${token}` } });
     setChildren(prev => prev.filter(c => c.id !== id));
-    showToast("🗑 Fiche supprimée.", "err");
+    showToast(t('childDeleted'), "err");
   };
 
   const age = (birthDate) => {
@@ -666,9 +667,10 @@ const ChildrenManager = ({ showToast, t = (k) => k }) => {
       onSaved={(saved) => {
         setChildren(prev => editing.id ? prev.map(c => c.id===saved.id?saved:c) : [...prev, saved]);
         setEditing(null);
-        showToast("✅ Fiche enregistrée !", "ok");
+        showToast(t('childSaved'), "ok");
       }}
       showToast={showToast}
+      t={t}
     />
   );
 
@@ -677,10 +679,9 @@ const ChildrenManager = ({ showToast, t = (k) => k }) => {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
           <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>{t('myChildren')}</div>
-<div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('childrenSubtitle')}</div>
-          <div style={{ color:G.muted, fontSize:"0.85rem" }}>Ces informations sont transmises à la babysitter lors d'une garde</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('childrenSubtitle')}</div>
         </div>
-       <Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
+        <Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
       </div>
 
       {loading && <div style={{ color:G.muted, textAlign:"center", padding:30 }}>Chargement…</div>}
@@ -689,8 +690,8 @@ const ChildrenManager = ({ showToast, t = (k) => k }) => {
         <Card style={{ textAlign:"center", padding:40 }}>
           <div style={{ fontSize:"3rem", marginBottom:12 }}>👶</div>
           <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>{t('noChildren')}</div>
-<div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('childrenSubtitle')}</div>
-<Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
+          <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('childrenSubtitle')}</div>
+          <Btn onClick={() => setEditing({})} variant="teal">{t('createFirstProfile')}</Btn>
         </Card>
       )}
 
@@ -714,19 +715,19 @@ const ChildrenManager = ({ showToast, t = (k) => k }) => {
 
             {c.allergies && (
               <div style={{ background:"rgba(255,95,87,0.1)", border:`1px solid ${G.coral}33`, borderRadius:8, padding:"8px 12px", marginBottom:8 }}>
-                <div style={{ color:G.coral, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>⚠️ ALLERGIES</div>
+                <div style={{ color:G.coral, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>{t('allergies')}</div>
                 <div style={{ color:G.text, fontSize:"0.8rem" }}>{c.allergies}</div>
               </div>
             )}
             {c.medications && (
               <div style={{ background:"rgba(251,191,36,0.1)", border:`1px solid ${G.amber}33`, borderRadius:8, padding:"8px 12px", marginBottom:8 }}>
-                <div style={{ color:G.amber, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>💊 MÉDICAMENTS</div>
+                <div style={{ color:G.amber, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>{t('medications')}</div>
                 <div style={{ color:G.text, fontSize:"0.8rem" }}>{c.medications}</div>
               </div>
             )}
             {c.routines && (
               <div style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.5, marginTop:6 }}>
-                <strong style={{ color:G.text }}>🔁 Routines :</strong> {c.routines}
+                <strong style={{ color:G.text }}>{t('routines')} :</strong> {c.routines}
               </div>
             )}
           </Card>
@@ -737,7 +738,7 @@ const ChildrenManager = ({ showToast, t = (k) => k }) => {
 };
 
 // ─── CHILD FORM ───────────────────────────────────────────────
-const ChildForm = ({ child, onCancel, onSaved, showToast }) => {
+const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
   const [firstName, setFirstName] = useState(child.first_name || "");
   const [birthDate, setBirthDate] = useState(child.birth_date?.slice(0,10) || "");
   const [gender, setGender] = useState(child.gender || "");
@@ -857,7 +858,6 @@ const ChildForm = ({ child, onCancel, onSaved, showToast }) => {
     </div>
   );
 };
-// ─── PARENT PROFILE ───────────────────────────────────────────
 // ─── PARENT PROFILE ───────────────────────────────────────────
 const ParentProfile = ({ user, showToast, t = (k) => k }) => {
   const [saving, setSaving] = useState(false);
