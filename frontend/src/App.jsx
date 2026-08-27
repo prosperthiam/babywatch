@@ -1098,93 +1098,96 @@ const ParentProfile = ({ user, showToast, t = (k) => k }) => {
   );
 };
 // ─── BOOKING FORM ─────────────────────────────────────────────
-const BookingForm = ({ sitter, onBack, onConfirm }) => {
+const BookingForm = ({ sitter, onBack, onConfirm, t = (k) => k }) => {
   const [showPayment, setShowPayment] = useState(false);
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
   const [date, setDate] = useState(tomorrow.toISOString().slice(0,10));
   const [time, setTime] = useState("18:30");
   const [duration, setDuration] = useState("3");
   const [myChildren, setMyChildren] = useState([]);
-const [selectedChildren, setSelectedChildren] = useState([]);
+  const [selectedChildren, setSelectedChildren] = useState([]);
 
-useEffect(() => {
-  const token = localStorage.getItem('token');
-  if (!token) return;
-  fetch(`${API}/children`, { headers:{ 'Authorization':`Bearer ${token}` } })
-    .then(r => r.json())
-    .then(d => setMyChildren(Array.isArray(d)?d:[]))
-    .catch(console.error);
-}, []);
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/children`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setMyChildren(Array.isArray(d)?d:[]))
+      .catch(console.error);
+  }, []);
+
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [camera, setCamera] = useState(sitter.camera);
   const price = parseInt(duration) * sitter.price + (camera ? parseInt(duration) * 2 : 0);
+  const childrenCount = selectedChildren.length || 1;
+
   return (
     <div>
-      <button onClick={onBack} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", marginBottom:20 }}>← Retour</button>
+      <button onClick={onBack} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", marginBottom:20 }}>{t('back')}</button>
       <div style={{ display:"grid", gridTemplateColumns:"1fr 340px", gap:20 }}>
         <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"1.2rem", color:"#fff", marginBottom:20 }}>Détails de la réservation</div>
-          <Input label="Date" type="date" value={date} onChange={setDate} />
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"1.2rem", color:"#fff", marginBottom:20 }}>{t('bookingDetails')}</div>
+          <Input label={t('date')} type="date" value={date} onChange={setDate} />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-            <Input label="Heure de début" type="time" value={time} onChange={setTime} />
+            <Input label={t('startTime')} type="time" value={time} onChange={setTime} />
             <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Durée (heures)</label>
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('duration')}</label>
               <select value={duration} onChange={e=>setDuration(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
                 {["2","3","4","5","6"].map(d=><option key={d} value={d}>{d}h</option>)}
               </select>
             </div>
           </div>
-          <Input label="Adresse" value={address} onChange={setAddress} placeholder="12 rue de la Paix, 75001 Paris" icon="📍" />
-          <Input label="Notes (optionnel)" value={notes} onChange={setNotes} placeholder="Allergies, routines, code d'entrée…" />
+          <Input label={t('address')} value={address} onChange={setAddress} placeholder="12 rue de la Paix, 75001 Paris" icon="📍" />
+          <Input label={t('notes')} value={notes} onChange={setNotes} placeholder="Allergies, routines, code d'entrée…" />
           {sitter.camera && (
             <div onClick={() => setCamera(!camera)} style={{ display:"flex", alignItems:"center", gap:14, background:camera?G.teal+"18":"rgba(255,255,255,0.04)", border:`1.5px solid ${camera?G.teal+"44":G.border}`, borderRadius:12, padding:"14px 16px", cursor:"pointer", marginBottom:20 }}>
               <div style={{ width:44, height:24, background:camera?G.teal:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0 }}>
                 <div style={{ position:"absolute", top:3, left:camera?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
               </div>
               <div>
-                <div style={{ fontWeight:700, color:camera?G.teal:G.text, fontSize:"0.88rem" }}>📹 Surveillance caméra</div>
-                <div style={{ color:G.muted, fontSize:"0.75rem" }}>Flux vidéo chiffré · +2€/h</div>
+                <div style={{ fontWeight:700, color:camera?G.teal:G.text, fontSize:"0.88rem" }}>{t('cameraOption')}</div>
+                <div style={{ color:G.muted, fontSize:"0.75rem" }}>{t('cameraDesc')}</div>
               </div>
             </div>
           )}
-{showPayment && (
-  <PaymentModal
-    booking={{ id:"temp", sitterName:sitter.name, date, time, duration:duration+"h", children:parseInt(children), address, camera, price }}
-    onClose={() => setShowPayment(false)}
-    onSuccess={() => onConfirm({ id:"BK"+Date.now(), sitterId:sitter.id, sitterName:sitter.name, sitterAvatar:sitter.avatar, date, time, duration:duration+"h", children:parseInt(children), address, notes, camera, status:"confirmed", price, createdAt:new Date().toISOString().slice(0,10) })}
-    showToast={() => {}}
-  />
-)}
-<div style={{ marginBottom:20 }}>
-  <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>👶 Enfants à garder</label>
-  {myChildren.length === 0 ? (
-    <div style={{ background:G.night, border:`1px dashed ${G.border}`, borderRadius:10, padding:"14px", fontSize:"0.82rem", color:G.muted, textAlign:"center" }}>
-      Aucune fiche enfant. Créez-en une dans l'onglet 👶 Mes enfants.
-    </div>
-  ) : (
-    <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-      {myChildren.map(c => {
-        const on = selectedChildren.includes(c.id);
-        return (
-          <button key={c.id} onClick={() => setSelectedChildren(prev => on ? prev.filter(i=>i!==c.id) : [...prev, c.id])}
-            style={{ display:"flex", alignItems:"center", gap:8, background: on?G.teal+"22":"rgba(255,255,255,0.04)", border:`2px solid ${on?G.teal:G.border}`, borderRadius:12, padding:"8px 14px", cursor:"pointer", color: on?G.teal:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem" }}>
-            <span style={{ fontSize:"1.3rem" }}>{c.avatar||"👶"}</span>
-            {c.first_name}
-            {c.allergies && <span title="Allergies" style={{ fontSize:"0.7rem" }}>⚠️</span>}
-          </button>
-        );
-      })}
-    </div>
-  )}
-</div>
-<Btn onClick={() => { if(!address){alert("Renseignez l'adresse."); return;} setShowPayment(true); }} variant="teal" size="lg" full>
-  💳 Procéder au paiement →
-</Btn>
+          {showPayment && (
+            <PaymentModal
+              booking={{ id:"temp", sitterName:sitter.name, date, time, duration:duration+"h", children:childrenCount, address, camera, price }}
+              onClose={() => setShowPayment(false)}
+              onSuccess={() => onConfirm({ id:"BK"+Date.now(), sitterId:sitter.id, sitterName:sitter.name, sitterAvatar:sitter.avatar, date, time, duration:duration+"h", children:childrenCount, address, notes, camera, status:"confirmed", price, createdAt:new Date().toISOString().slice(0,10) })}
+              showToast={() => {}}
+            />
+          )}
+          <div style={{ marginBottom:20 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>{t('childrenToWatch')}</label>
+            {myChildren.length === 0 ? (
+              <div style={{ background:G.night, border:`1px dashed ${G.border}`, borderRadius:10, padding:"14px", fontSize:"0.82rem", color:G.muted, textAlign:"center" }}>
+                {t('noChildProfiles')}
+              </div>
+            ) : (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                {myChildren.map(c => {
+                  const on = selectedChildren.includes(c.id);
+                  return (
+                    <button key={c.id} onClick={() => setSelectedChildren(prev => on ? prev.filter(i=>i!==c.id) : [...prev, c.id])}
+                      style={{ display:"flex", alignItems:"center", gap:8, background: on?G.teal+"22":"rgba(255,255,255,0.04)", border:`2px solid ${on?G.teal:G.border}`, borderRadius:12, padding:"8px 14px", cursor:"pointer", color: on?G.teal:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem" }}>
+                      <span style={{ fontSize:"1.3rem" }}>{c.avatar||"👶"}</span>
+                      {c.first_name}
+                      {c.allergies && <span title={t('allergies')} style={{ fontSize:"0.7rem" }}>⚠️</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <Btn onClick={() => { if(!address){alert(t('addressRequired')); return;} setShowPayment(true); }} variant="teal" size="lg" full>
+            {t('proceedPayment')}
+          </Btn>
         </Card>
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           <Card>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Babysitter</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>{t('sitterLabel')}</div>
             <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
               <span style={{ fontSize:"2.5rem" }}>{sitter.avatar}</span>
               <div>
@@ -1194,17 +1197,17 @@ useEffect(() => {
             </div>
           </Card>
           <Card>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Estimation</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>{t('estimation')}</div>
             <div style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:`1px solid ${G.border}`, fontSize:"0.82rem" }}>
-              <span style={{ color:G.muted }}>Garde {duration}h × {sitter.price}€/h</span>
+              <span style={{ color:G.muted }}>{t('careLabel')} {duration}h × {sitter.price}€/h</span>
               <span style={{ color:G.text }}>{parseInt(duration)*sitter.price}€</span>
             </div>
             {camera && <div style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:`1px solid ${G.border}`, fontSize:"0.82rem" }}>
-              <span style={{ color:G.muted }}>Caméra {duration}h × 2€/h</span>
+              <span style={{ color:G.muted }}>{t('cameraBadge')} {duration}h × 2€/h</span>
               <span style={{ color:G.text }}>{parseInt(duration)*2}€</span>
             </div>}
             <div style={{ display:"flex", justifyContent:"space-between", padding:"12px 0 0", fontFamily:"'Nunito',sans-serif", fontWeight:800 }}>
-              <span style={{ color:"#fff" }}>Total estimé</span>
+              <span style={{ color:"#fff" }}>{t('totalEstimate')}</span>
               <span style={{ color:G.teal, fontSize:"1.2rem" }}>{price}€</span>
             </div>
           </Card>
