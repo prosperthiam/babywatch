@@ -1322,13 +1322,13 @@ const ReviewModal = ({ booking, onClose, onSubmit }) => {
 };
 
 // ─── PARENT BOOKINGS ──────────────────────────────────────────
-const ParentBookings = ({ user, bookings, onCancel, onNav, onReview }) => {
+const ParentBookings = ({ user, bookings, onCancel, onNav, onReview, t = (k) => k }) => {
   const [filter, setFilter] = useState("all");
   const [reviewBooking, setReviewBooking] = useState(null);
+  const [chatBooking, setChatBooking] = useState(null);
   const my = bookings.filter(b => b.parentId === user.id);
-  const tabs = [["all","Toutes"],["pending","En attente"],["confirmed","Confirmées"],["completed","Terminées"]];
+  const tabs = ["all","pending","confirmed","completed"];
   const filtered = filter==="all" ? my : my.filter(b=>b.status===filter);
-const [chatBooking, setChatBooking] = useState(null);
 
   return (
     <div>
@@ -1342,31 +1342,31 @@ const [chatBooking, setChatBooking] = useState(null);
           }}
         />
       )}
-{chatBooking && (
-  <ChatModal
-    booking={chatBooking}
-    user={user}
-    onClose={() => setChatBooking(null)}
-  />
-)}
+      {chatBooking && (
+        <ChatModal
+          booking={chatBooking}
+          user={user}
+          onClose={() => setChatBooking(null)}
+        />
+      )}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>Mes gardes</div>
-          <div style={{ color:G.muted, fontSize:"0.85rem" }}>Suivi de toutes vos demandes</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>{t('myBookings')}</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('bookingsSubtitle')}</div>
         </div>
-        <Btn onClick={() => onNav("search")} variant="teal">+ Nouvelle réservation</Btn>
+        <Btn onClick={() => onNav("search")} variant="teal">{t('newBooking')}</Btn>
       </div>
 
       <div style={{ display:"flex", gap:6, marginBottom:20 }}>
-        {tabs.map(([id,label]) => (
+        {tabs.map(id => (
           <button key={id} onClick={() => setFilter(id)} style={{ padding:"7px 16px", borderRadius:8, border:`1px solid ${filter===id?G.teal:G.border}`, background:filter===id?G.teal+"22":"transparent", color:filter===id?G.teal:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.8rem", cursor:"pointer" }}>
-            {label}
+            {t(id)}
           </button>
         ))}
       </div>
 
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-        {filtered.length===0 && <div style={{ textAlign:"center", padding:"40px", color:G.muted }}>Aucune garde dans cette catégorie.</div>}
+        {filtered.length===0 && <div style={{ textAlign:"center", padding:"40px", color:G.muted }}>{t('noBookings')}</div>}
         {filtered.map(b => (
           <Card key={b.id}>
             <div style={{ display:"flex", alignItems:"flex-start", gap:16 }}>
@@ -1375,10 +1375,10 @@ const [chatBooking, setChatBooking] = useState(null);
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6, flexWrap:"wrap" }}>
                   <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{b.sitterName}</span>
                   <StatusBadge status={b.status} />
-                  {b.camera && <Badge color={G.teal}>📹 Caméra</Badge>}
+                  {b.camera && <Badge color={G.teal}>📹 {t('cameraBadge')}</Badge>}
                   <span style={{ marginLeft:"auto", fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.teal }}>{b.price}€</span>
                 </div>
-                <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:4 }}>📅 {b.date} à {b.time} · ⏱ {b.duration} · 👶 {b.children} enfant{b.children>1?"s":""}</div>
+                <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:4 }}>📅 {b.date} · {b.time} · ⏱ {b.duration} · 👶 {b.children} {b.children>1?t('childrenLabelPlural'):t('childrenLabel')}</div>
                 <div style={{ color:G.muted, fontSize:"0.78rem" }}>📍 {b.address}</div>
                 {b.notes && <div style={{ fontSize:"0.75rem", color:G.muted, background:"rgba(255,255,255,0.04)", borderRadius:6, padding:"6px 10px", marginTop:8 }}>💬 {b.notes}</div>}
 
@@ -1387,7 +1387,7 @@ const [chatBooking, setChatBooking] = useState(null);
                   <div style={{ marginTop:10, background:G.amber+"11", border:`1px solid ${G.amber}33`, borderRadius:8, padding:"10px 12px" }}>
                     <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:4 }}>
                       <span style={{ color:G.amber }}>{"⭐".repeat(b.rating)}</span>
-                      <span style={{ fontSize:"0.72rem", color:G.muted }}>Votre avis</span>
+                      <span style={{ fontSize:"0.72rem", color:G.muted }}>{t('yourReview')}</span>
                     </div>
                     {b.review && <div style={{ fontSize:"0.8rem", color:G.text, lineHeight:1.5 }}>"{b.review}"</div>}
                   </div>
@@ -1395,10 +1395,11 @@ const [chatBooking, setChatBooking] = useState(null);
               </div>
 
               <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {(b.status==="confirmed"||b.status==="pending") && <Btn onClick={() => setChatBooking(b)} variant="ghost" size="sm">{t('chat')}</Btn>}
                 {b.camera && b.status==="confirmed" && <Btn onClick={() => onNav("camera")} variant="teal" size="sm">📹 Live</Btn>}
-                {b.status==="pending" && <Btn onClick={() => onCancel(b.id)} variant="danger" size="sm">Annuler</Btn>}
+                {b.status==="pending" && <Btn onClick={() => onCancel(b.id)} variant="danger" size="sm">{t('cancel')}</Btn>}
                 {b.status==="completed" && !b.rating && (
-                  <Btn onClick={() => setReviewBooking(b)} variant="amber" size="sm">⭐ Noter</Btn>
+                  <Btn onClick={() => setReviewBooking(b)} variant="amber" size="sm">{t('rate')}</Btn>
                 )}
               </div>
             </div>
