@@ -630,8 +630,7 @@ const ParentHome = ({ user, bookings, onNav, t = (k) => k }) => {
 // ─── CHILDREN MANAGER ─────────────────────────────────────────
 const CHILD_AVATARS = ["👶","🧒","👦","👧","🍼","🧸"];
 
-const ChildrenManager = ({ showToast }) => {
-  const [children, setChildren] = useState([]);
+const ChildrenManager = ({ showToast, t = (k) => k }) => {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('token');
@@ -677,10 +676,11 @@ const ChildrenManager = ({ showToast }) => {
     <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>👶 Mes enfants</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>{t('myChildren')}</div>
+<div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('childrenSubtitle')}</div>
           <div style={{ color:G.muted, fontSize:"0.85rem" }}>Ces informations sont transmises à la babysitter lors d'une garde</div>
         </div>
-        <Btn onClick={() => setEditing({})} variant="teal">+ Ajouter un enfant</Btn>
+       <Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
       </div>
 
       {loading && <div style={{ color:G.muted, textAlign:"center", padding:30 }}>Chargement…</div>}
@@ -688,9 +688,9 @@ const ChildrenManager = ({ showToast }) => {
       {!loading && children.length === 0 && (
         <Card style={{ textAlign:"center", padding:40 }}>
           <div style={{ fontSize:"3rem", marginBottom:12 }}>👶</div>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>Aucune fiche enfant</div>
-          <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Ajoutez vos enfants pour que les babysitters connaissent leurs besoins.</div>
-          <Btn onClick={() => setEditing({})} variant="teal">+ Créer ma première fiche</Btn>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>{t('noChildren')}</div>
+<div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('childrenSubtitle')}</div>
+<Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
         </Card>
       )}
 
@@ -2998,8 +2998,7 @@ export default function App() {
   if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast} t={t}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast} t={t}/>;
   if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission} t={t}/>;
   if (page==="camera")   return <CameraPage user={user} t={t}/>;
-  if (page==="children") return <ChildrenManager showToast={showToast}/>;
-  return null;
+if (page==="children") return <ChildrenManager showToast={showToast} t={t}/>;
 };
 
   return (
