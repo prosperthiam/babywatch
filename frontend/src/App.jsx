@@ -757,7 +757,7 @@ const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
-    if (!firstName.trim()) { showToast("⚠️ Le prénom est obligatoire.", "err"); return; }
+    if (!firstName.trim()) { showToast(t('firstNameRequired'), "err"); return; }
     setSaving(true);
     try {
       const token = localStorage.getItem('token');
@@ -772,86 +772,86 @@ const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
       const data = await res.json();
       if (res.ok) onSaved(data);
       else showToast("❌ " + data.error, "err");
-    } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
     setSaving(false);
   };
 
   return (
     <div>
-      <button onClick={onCancel} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", marginBottom:18 }}>← Retour</button>
+      <button onClick={onCancel} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", marginBottom:18 }}>{t('back')}</button>
 
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>
-          {child.id ? "✏️ Modifier la fiche" : "👶 Nouvelle fiche enfant"}
+          {child.id ? t('editChildForm') : t('newChildForm')}
         </div>
-        <Btn onClick={save} variant="teal" disabled={saving}>{saving?"Enregistrement…":"💾 Enregistrer"}</Btn>
+        <Btn onClick={save} variant="teal" disabled={saving}>{saving ? t('saving') : t('save')}</Btn>
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
 
         <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>👶 Identité</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>👶 {t('identity')}</div>
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>Avatar</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>{t('childAvatar')}</label>
             <div style={{ display:"flex", gap:8 }}>
               {CHILD_AVATARS.map(a => (
                 <button key={a} onClick={() => setAvatar(a)} style={{ fontSize:"1.6rem", background: avatar===a?G.teal+"22":"rgba(255,255,255,0.04)", border:`2px solid ${avatar===a?G.teal:G.border}`, borderRadius:10, padding:"6px 10px", cursor:"pointer" }}>{a}</button>
               ))}
             </div>
           </div>
-          <Input label="Prénom *" value={firstName} onChange={setFirstName} placeholder="Emma" />
-          <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
+          <Input label={t('childFirstName') + " *"} value={firstName} onChange={setFirstName} placeholder="Emma" />
+          <Input label={t('birthDate')} type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Genre</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('gender')}</label>
             <select value={gender} onChange={e=>setGender(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
-              <option value="">Non précisé</option>
-              <option value="fille">Fille</option>
-              <option value="garcon">Garçon</option>
+              <option value="">{t('genderUnspecified')}</option>
+              <option value="fille">{t('genderGirl')}</option>
+              <option value="garcon">{t('genderBoy')}</option>
             </select>
           </div>
-          <Input label="Heure du coucher" type="time" value={bedtime} onChange={setBedtime} icon="🌙" />
+          <Input label={t('bedtime')} type="time" value={bedtime} onChange={setBedtime} icon="🌙" />
         </Card>
 
         <Card style={{ borderColor:G.coral+"33" }}>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>⚕️ Santé & Sécurité</div>
-          <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:16 }}>Informations critiques transmises à la babysitter</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>{t('healthSafety')}</div>
+          <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:16 }}>{t('healthSafetySubtitle')}</div>
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.coral, marginBottom:6 }}>⚠️ Allergies</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.coral, marginBottom:6 }}>{t('allergies')}</label>
             <textarea value={allergies} onChange={e=>setAllergies(e.target.value)} placeholder="Arachides, lactose, pollen…" style={{ width:"100%", background:"rgba(255,95,87,0.06)", border:`1.5px solid ${G.coral}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.amber, marginBottom:6 }}>💊 Médicaments</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.amber, marginBottom:6 }}>{t('medications')}</label>
             <textarea value={medications} onChange={e=>setMedications(e.target.value)} placeholder="Ventoline si toux · 1 dose max" style={{ width:"100%", background:"rgba(251,191,36,0.06)", border:`1.5px solid ${G.amber}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>🏥 Notes médicales</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('medicalNotes')}</label>
             <textarea value={medicalNotes} onChange={e=>setMedicalNotes(e.target.value)} placeholder="Asthme léger, port de lunettes…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
         </Card>
 
         <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>🔁 Habitudes</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('habits')}</div>
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Routines</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('routines')}</label>
             <textarea value={routines} onChange={e=>setRoutines(e.target.value)} placeholder="Biberon à 19h, histoire avant de dormir, veilleuse allumée…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:70 }} />
           </div>
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>🎨 Activités préférées</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('favoriteActivities')}</label>
             <textarea value={favoriteActivities} onChange={e=>setFavoriteActivities(e.target.value)} placeholder="Dessin, puzzles, jouer dehors…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>😰 Peurs / À éviter</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('fears')}</label>
             <textarea value={fears} onChange={e=>setFears(e.target.value)} placeholder="Peur du noir, n'aime pas les chiens…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
         </Card>
 
         <Card style={{ borderColor:G.green+"33" }}>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>📞 Contacts d'urgence</div>
-          <Input label="Nom du médecin" value={doctorName} onChange={setDoctorName} placeholder="Dr. Martin" icon="🩺" />
-          <Input label="Téléphone du médecin" value={doctorPhone} onChange={setDoctorPhone} placeholder="+33 1 23 45 67 89" icon="📞" />
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('emergencyContacts')}</div>
+          <Input label={t('doctorName')} value={doctorName} onChange={setDoctorName} placeholder="Dr. Martin" icon="🩺" />
+          <Input label={t('doctorPhone')} value={doctorPhone} onChange={setDoctorPhone} placeholder="+33 1 23 45 67 89" icon="📞" />
           <div style={{ height:1, background:G.border, margin:"6px 0 16px" }} />
-          <Input label="Contact d'urgence (nom)" value={emergencyContactName} onChange={setEmergencyContactName} placeholder="Grand-mère Nicole" icon="👤" />
-          <Input label="Contact d'urgence (téléphone)" value={emergencyContactPhone} onChange={setEmergencyContactPhone} placeholder="+33 6 12 34 56 78" icon="📞" />
+          <Input label={t('emergencyContactName')} value={emergencyContactName} onChange={setEmergencyContactName} placeholder="Grand-mère Nicole" icon="👤" />
+          <Input label={t('emergencyContactPhone')} value={emergencyContactPhone} onChange={setEmergencyContactPhone} placeholder="+33 6 12 34 56 78" icon="📞" />
         </Card>
 
       </div>
