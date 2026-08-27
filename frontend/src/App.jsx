@@ -1466,27 +1466,35 @@ const SitterHome = ({ user, bookings, onNav, t = (k) => k }) => {
   );
 };
 // ─── SITTER MISSIONS ──────────────────────────────────────────
-const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
+const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) => {
   const [filter, setFilter] = useState("all");
-  const my = bookings.filter(b => b.sitterId === user.id);
-  const tabs = [["all","Toutes"],["pending","À confirmer"],["confirmed","Confirmées"],["completed","Terminées"]];
-  const filtered = filter==="all" ? my : my.filter(b=>b.status===filter);
   const [chatBooking, setChatBooking] = useState(null);
+  const my = bookings.filter(b => b.sitterId === user.id);
+  const tabs = ["all","toConfirm","confirmed","completed"];
+  const filtered = filter==="all" ? my : filter==="toConfirm" ? my.filter(b=>b.status==="pending") : my.filter(b=>b.status===filter);
+
   return (
     <div>
+      {chatBooking && (
+        <ChatModal
+          booking={chatBooking}
+          user={user}
+          onClose={() => setChatBooking(null)}
+        />
+      )}
       <div style={{ marginBottom:20 }}>
-        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>Mes missions</div>
-        <div style={{ color:G.muted, fontSize:"0.85rem" }}>Gérez les demandes et missions en cours.</div>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff" }}>{t('myMissions')}</div>
+        <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('missionsSubtitle')}</div>
       </div>
       <div style={{ display:"flex", gap:6, marginBottom:20 }}>
-        {tabs.map(([id,label]) => (
+        {tabs.map(id => (
           <button key={id} onClick={() => setFilter(id)} style={{ padding:"7px 16px", borderRadius:8, border:`1px solid ${filter===id?G.amber:G.border}`, background:filter===id?G.amber+"22":"transparent", color:filter===id?G.amber:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.8rem", cursor:"pointer" }}>
-            {label}
+            {t(id)}
           </button>
         ))}
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-        {filtered.length===0 && <div style={{ textAlign:"center", padding:"40px", color:G.muted }}>Aucune mission ici.</div>}
+        {filtered.length===0 && <div style={{ textAlign:"center", padding:"40px", color:G.muted }}>{t('noMissions')}</div>}
         {filtered.map(b => (
           <Card key={b.id}>
             <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
@@ -1495,32 +1503,28 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline }) => {
                 <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6, flexWrap:"wrap" }}>
                   <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{b.parentName}</span>
                   <StatusBadge status={b.status} />
-                  {b.camera && <Badge color={G.teal}>📹 Caméra</Badge>}
+                  {b.camera && <Badge color={G.teal}>📹 {t('cameraBadge')}</Badge>}
                   <span style={{ marginLeft:"auto", fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.teal, fontSize:"1.1rem" }}>{b.price}€</span>
                 </div>
-                <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:4 }}>📅 {b.date} à {b.time} · ⏱ {b.duration} · 👶 {b.children} enfant{b.children>1?"s":""}</div>
+                <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:4 }}>📅 {b.date} · {b.time} · ⏱ {b.duration} · 👶 {b.children} {b.children>1?t('childrenLabelPlural'):t('childrenLabel')}</div>
                 <div style={{ color:G.muted, fontSize:"0.78rem" }}>📍 {b.address}</div>
                 {b.notes && <div style={{ fontSize:"0.75rem", color:G.muted, background:"rgba(255,255,255,0.04)", borderRadius:6, padding:"6px 10px", marginTop:8 }}>💬 {b.notes}</div>}
               </div>
-              {b.status==="pending" && (
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  <Btn onClick={() => onAccept(b.id)} variant="teal" size="sm">✅ Accepter</Btn>
-                  <Btn onClick={() => onDecline(b.id)} variant="danger" size="sm">✕ Refuser</Btn>
-                </div>
-              )}
+              <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {(b.status==="confirmed"||b.status==="pending") && <Btn onClick={() => setChatBooking(b)} variant="ghost" size="sm">{t('chat')}</Btn>}
+                {b.status==="pending" && (
+                  <>
+                    <Btn onClick={() => onAccept(b.id)} variant="teal" size="sm">{t('accept')}</Btn>
+                    <Btn onClick={() => onDecline(b.id)} variant="danger" size="sm">{t('decline')}</Btn>
+                  </>
+                )}
+              </div>
             </div>
           </Card>
         ))}
       </div>
     </div>
   );
-  {chatBooking && (
-  <ChatModal
-    booking={chatBooking}
-    user={user}
-    onClose={() => setChatBooking(null)}
-  />
-)}
 };
 
 // ─── AVAILABILITY CALENDAR ────────────────────────────────────
