@@ -481,7 +481,6 @@ if (show2FA) return (
 // ─── NAV ──────────────────────────────────────────────────────
 const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange }) => {
   const isParent = user.role === "parent";
-  const t = useTranslation(lang);
 
   const navItems = isParent
     ? [
@@ -2867,6 +2866,7 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [toast, showToast] = useToast();
   const [lang, setLang] = useState(localStorage.getItem('lang') || 'fr');
+  const t = useTranslation(lang);
 
   const changeLang = (newLang) => {
     setLang(newLang);
@@ -3002,7 +3002,6 @@ export default function App() {
   );
 
   const isParent = user.role === "parent";
-  const t = useTranslation(lang);
 
  const renderPage = () => {
   if (page==="home")     return isParent ? <ParentHome user={user} bookings={bookings} onNav={setPage} t={t}/> : <SitterHome user={user} bookings={bookings} onNav={setPage} t={t}/>;
