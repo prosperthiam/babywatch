@@ -333,7 +333,7 @@ const TwoFactorPage = ({ userId, onSuccess, onBack, t = (k) => k }) => {
 };
 
 // ─── AUTH PAGE ────────────────────────────────────────────────
-const AuthPage = ({ onLogin, t = (k) => k }) => {
+const AuthPage = ({ onLogin, t = (k) => k, onBackToLanding }) => {
   const [mode, setMode] = useState("login");
   const [role, setRole] = useState("parent");
   const [email, setEmail] = useState("");
@@ -481,7 +481,215 @@ if (show2FA) return (
 
         </div>
       </div>
-      <div style={{ color:G.muted, fontSize:"0.72rem", marginTop:20 }}>🔒 Connexion sécurisée · RGPD</div>
+      {onBackToLanding && (
+        <button onClick={onBackToLanding} style={{ marginTop:18, background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem", fontFamily:"'Inter',sans-serif" }}>
+          {t('backToHome')}
+        </button>
+      )}
+      <div style={{ color:G.muted, fontSize:"0.72rem", marginTop:14 }}>🔒 {t('secureConnection')}</div>
+    </div>
+  );
+};
+
+// ─── LANDING PAGE ─────────────────────────────────────────────
+const LandingPage = ({ onStart, onLogin, lang, onLangChange, t = (k) => k }) => {
+  const [clock, setClock] = useState("20:14:07");
+
+  useEffect(() => {
+    const iv = setInterval(() => setClock(new Date().toTimeString().slice(0,8)), 1000);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div style={{ background:G.night, minHeight:"100vh", color:G.text }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        .bw-wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+        .bw-hero{display:grid;grid-template-columns:1.1fr 0.9fr;gap:56px;align-items:center;padding:80px 0 96px}
+        .bw-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+        .bw-grid2{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center}
+        .bw-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:28px}
+        @media(max-width:860px){
+          .bw-hero{grid-template-columns:1fr;gap:40px;padding:48px 0 64px}
+          .bw-grid3,.bw-steps{grid-template-columns:1fr}
+          .bw-grid2{grid-template-columns:1fr;gap:28px}
+          .bw-h1{font-size:2.2rem!important}
+        }
+        @keyframes bw-live{0%,100%{opacity:1}50%{opacity:0.25}}
+        .bw-btn:focus-visible{outline:3px solid ${G.teal};outline-offset:3px}
+        @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+      `}</style>
+
+      {/* En-tête */}
+      <header style={{ borderBottom:`1px solid ${G.border}`, position:"sticky", top:0, background:"rgba(15,25,35,0.92)", backdropFilter:"blur(10px)", zIndex:50 }}>
+        <div className="bw-wrap" style={{ height:68, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.25rem", color:"#fff" }}>
+            🍼 Baby<span style={{ color:G.teal }}>Watch</span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <select value={lang} onChange={e=>onLangChange(e.target.value)} aria-label="Langue"
+              style={{ background:G.card, border:`1px solid ${G.border}`, color:G.text, borderRadius:8, padding:"7px 10px", fontFamily:"'Inter',sans-serif", fontSize:"0.8rem", cursor:"pointer", outline:"none" }}>
+              <option value="fr">🇫🇷 FR</option>
+              <option value="en">🇬🇧 EN</option>
+              <option value="ar">🇸🇦 AR</option>
+            </select>
+            <button className="bw-btn" onClick={onLogin}
+              style={{ background:"none", border:`1px solid ${G.border}`, color:G.text, borderRadius:10, padding:"9px 18px", fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem", cursor:"pointer" }}>
+              {t('login')}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="bw-wrap bw-hero">
+        <div>
+          <h1 className="bw-h1" style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"3rem", lineHeight:1.1, color:"#fff", letterSpacing:"-0.02em", marginBottom:20 }}>
+            {t('heroTitle')}
+          </h1>
+          <p style={{ color:G.muted, fontSize:"1.05rem", lineHeight:1.7, maxWidth:"52ch", marginBottom:32 }}>
+            {t('heroSubtitle')}
+          </p>
+          <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+            <button className="bw-btn" onClick={onStart}
+              style={{ background:G.teal, color:"#0f1923", border:"none", borderRadius:12, padding:"15px 30px", fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"1rem", cursor:"pointer" }}>
+              {t('heroCta')}
+            </button>
+            <button className="bw-btn" onClick={onStart}
+              style={{ background:"rgba(255,255,255,0.06)", color:G.text, border:`1px solid ${G.border}`, borderRadius:12, padding:"15px 30px", fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"1rem", cursor:"pointer" }}>
+              {t('heroCtaSitter')}
+            </button>
+          </div>
+          <p style={{ color:G.muted, fontSize:"0.8rem", marginTop:18 }}>{t('heroFree')}</p>
+        </div>
+
+        {/* Cadre caméra live */}
+        <div>
+          <div style={{ background:"#000", borderRadius:18, overflow:"hidden", position:"relative", aspectRatio:"4/3", border:`1px solid ${G.border}`, boxShadow:"0 24px 60px rgba(0,0,0,0.5)" }}>
+            <div style={{ position:"absolute", inset:0, background:"linear-gradient(160deg,#1a2b3d,#0d1620)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ fontSize:"4.5rem", opacity:0.9 }}>🧸</div>
+            </div>
+            <div style={{ position:"absolute", top:0, left:0, right:0, padding:"14px 16px", background:"linear-gradient(180deg,rgba(0,0,0,0.7),transparent)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <span style={{ display:"inline-flex", alignItems:"center", gap:6, background:"rgba(239,68,68,0.92)", padding:"4px 11px", borderRadius:100, fontSize:"0.66rem", fontWeight:800, color:"#fff", letterSpacing:"0.04em" }}>
+                <span style={{ width:6, height:6, borderRadius:"50%", background:"#fff", animation:"bw-live 1.4s ease-in-out infinite" }} />
+                LIVE
+              </span>
+              <span style={{ color:"rgba(255,255,255,0.85)", fontSize:"0.78rem", fontWeight:600 }}>{clock}</span>
+            </div>
+            <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"26px 16px 14px", background:"linear-gradient(0deg,rgba(0,0,0,0.8),transparent)", fontSize:"0.74rem", color:"rgba(255,255,255,0.7)" }}>
+              {t('heroCameraCaption')}
+            </div>
+          </div>
+          <p style={{ color:G.muted, fontSize:"0.78rem", marginTop:12, textAlign:"center" }}>{t('heroCameraNote')}</p>
+        </div>
+      </section>
+
+      {/* Vérification — vraie séquence, donc numérotée */}
+      <section style={{ background:G.panel, borderTop:`1px solid ${G.border}`, borderBottom:`1px solid ${G.border}`, padding:"72px 0" }}>
+        <div className="bw-wrap">
+          <h2 style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.9rem", color:"#fff", marginBottom:10 }}>
+            {t('trustTitle')}
+          </h2>
+          <p style={{ color:G.muted, fontSize:"0.98rem", maxWidth:"58ch", marginBottom:40, lineHeight:1.7 }}>
+            {t('trustSubtitle')}
+          </p>
+          <div className="bw-steps">
+            {[
+              [t('trustStep1'), t('trustStep1Desc')],
+              [t('trustStep2'), t('trustStep2Desc')],
+              [t('trustStep3'), t('trustStep3Desc')],
+            ].map(([title, desc], i) => (
+              <div key={title} style={{ borderTop:`2px solid ${i===2?G.green:G.teal}`, paddingTop:18 }}>
+                <div style={{ color:i===2?G.green:G.teal, fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.6rem", marginBottom:8 }}>{i+1}</div>
+                <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"1rem", marginBottom:6 }}>{title}</div>
+                <div style={{ color:G.muted, fontSize:"0.87rem", lineHeight:1.65 }}>{desc}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Fonctionnalités */}
+      <section className="bw-wrap" style={{ padding:"72px 0" }}>
+        <h2 style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.9rem", color:"#fff", marginBottom:36 }}>
+          {t('featuresTitle')}
+        </h2>
+        <div className="bw-grid3">
+          {[
+            ["👶", t('feat1'), t('feat1Desc')],
+            ["💬", t('feat2'), t('feat2Desc')],
+            ["🆘", t('feat3'), t('feat3Desc')],
+            ["📅", t('feat4'), t('feat4Desc')],
+            ["🗺️", t('feat5'), t('feat5Desc')],
+            ["⭐", t('feat6'), t('feat6Desc')],
+          ].map(([icon, title, desc]) => (
+            <div key={title} style={{ background:G.card, border:`1px solid ${G.border}`, borderRadius:14, padding:"22px 22px 24px" }}>
+              <div style={{ fontSize:"1.7rem", marginBottom:12 }}>{icon}</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"0.98rem", marginBottom:7 }}>{title}</div>
+              <div style={{ color:G.muted, fontSize:"0.86rem", lineHeight:1.65 }}>{desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Crédit d'impôt */}
+      <section style={{ background:"linear-gradient(135deg,#0f2b28,#0f1f35)", borderTop:`1px solid ${G.teal}33`, borderBottom:`1px solid ${G.teal}33`, padding:"72px 0" }}>
+        <div className="bw-wrap bw-grid2">
+          <div>
+            <h2 style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.9rem", color:"#fff", marginBottom:14 }}>
+              {t('cesuTitle')}
+            </h2>
+            <p style={{ color:G.muted, fontSize:"0.98rem", lineHeight:1.75, marginBottom:16, maxWidth:"52ch" }}>
+              {t('cesuText')}
+            </p>
+            <p style={{ color:G.muted, fontSize:"0.8rem", lineHeight:1.6 }}>{t('cesuLegal')}</p>
+          </div>
+          <div style={{ background:"rgba(0,0,0,0.28)", border:`1px solid ${G.border}`, borderRadius:16, padding:"26px 28px" }}>
+            {[
+              [t('cesuLine1'), "240 €"],
+              [t('cesuLine2'), "−120 €"],
+            ].map(([label, val], i) => (
+              <div key={label} style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", padding:"12px 0", borderBottom:`1px solid ${G.border}` }}>
+                <span style={{ color:G.muted, fontSize:"0.88rem" }}>{label}</span>
+                <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"1.05rem", color: i===1?G.green:G.text }}>{val}</span>
+              </div>
+            ))}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", paddingTop:16 }}>
+              <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"0.95rem" }}>{t('cesuLine3')}</span>
+              <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.7rem", color:G.teal }}>120 €</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Appel final */}
+      <section className="bw-wrap" style={{ padding:"80px 0", textAlign:"center" }}>
+        <h2 style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"2rem", color:"#fff", marginBottom:14 }}>
+          {t('finalTitle')}
+        </h2>
+        <p style={{ color:G.muted, fontSize:"1rem", maxWidth:"48ch", margin:"0 auto 30px", lineHeight:1.7 }}>
+          {t('finalSubtitle')}
+        </p>
+        <button className="bw-btn" onClick={onStart}
+          style={{ background:G.teal, color:"#0f1923", border:"none", borderRadius:12, padding:"16px 38px", fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"1.02rem", cursor:"pointer" }}>
+          {t('heroCta')}
+        </button>
+      </section>
+
+      {/* Pied de page */}
+      <footer style={{ borderTop:`1px solid ${G.border}`, padding:"36px 0" }}>
+        <div className="bw-wrap" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:16, flexWrap:"wrap" }}>
+          <div style={{ color:G.muted, fontSize:"0.82rem" }}>
+            🍼 BabyWatch · {t('footerRights')}
+          </div>
+          <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
+            {[t('footerTerms'), t('footerPrivacy'), t('footerContact')].map(l => (
+              <span key={l} style={{ color:G.muted, fontSize:"0.82rem", cursor:"pointer" }}>{l}</span>
+            ))}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
@@ -2871,6 +3079,7 @@ const ChatModal = ({ booking, user, onClose, t = (k) => k }) => {
 export default function App() {
   const [user, setUser] = useState(null);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [page, setPage] = useState("home");
   const [bookings, setBookings] = useState([]);
   const [toast, showToast] = useToast();
@@ -3005,7 +3214,9 @@ export default function App() {
         ::-webkit-scrollbar{width:5px}
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
       `}</style>
-      <AuthPage onLogin={handleLogin} t={t} />
+      {showAuth
+        ? <AuthPage onLogin={handleLogin} t={t} onBackToLanding={() => setShowAuth(false)} />
+        : <LandingPage onStart={() => setShowAuth(true)} onLogin={() => setShowAuth(true)} lang={lang} onLangChange={changeLang} t={t} />}
       <Toast toast={toast} />
     </>
   );
