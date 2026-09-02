@@ -30,6 +30,14 @@ class ErrorBoundary extends Component {
             <div style={{ color:G.muted, fontSize:"0.88rem", marginBottom:20, lineHeight:1.6 }}>
               L'application a rencontré un problème inattendu. Rechargez la page pour continuer.
             </div>
+            {this.state.error && (
+              <div style={{ background:"rgba(255,95,87,0.08)", border:`1px solid ${G.coral}33`, borderRadius:8, padding:"10px 12px", marginBottom:20, textAlign:"left" }}>
+                <div style={{ color:G.coral, fontSize:"0.7rem", fontWeight:700, marginBottom:4 }}>DÉTAIL TECHNIQUE</div>
+                <div style={{ color:G.muted, fontSize:"0.72rem", fontFamily:"monospace", wordBreak:"break-word" }}>
+                  {String(this.state.error?.message || this.state.error)}
+                </div>
+              </div>
+            )}
             <button onClick={() => window.location.reload()} style={{ background:G.teal, color:"#0f1923", border:"none", borderRadius:10, padding:"12px 26px", fontFamily:"'Nunito',sans-serif", fontWeight:800, cursor:"pointer", fontSize:"0.9rem" }}>
               Recharger la page
             </button>
@@ -3028,14 +3036,14 @@ if (page==="children") return <ChildrenManager showToast={showToast} t={t}/>;
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
         select option{background:#162030}
       `}</style>
-      <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout} lang={lang} onLangChange={changeLang}/>
-      <main style={{ paddingTop:64, minHeight:"100vh" }}>
-        <div style={{ maxWidth:1100, margin:"0 auto", padding:"32px 24px" }}>
-          <ErrorBoundary>
+      <ErrorBoundary>
+        <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout} lang={lang} onLangChange={changeLang}/>
+        <main style={{ paddingTop:64, minHeight:"100vh" }}>
+          <div style={{ maxWidth:1100, margin:"0 auto", padding:"32px 24px" }}>
             {renderPage()}
-          </ErrorBoundary>
-        </div>
-      </main>
+          </div>
+        </main>
+      </ErrorBoundary>
       <Toast toast={toast}/>
     </>
   );
