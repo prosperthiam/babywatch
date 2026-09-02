@@ -489,6 +489,7 @@ if (show2FA) return (
 // ─── NAV ──────────────────────────────────────────────────────
 const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange }) => {
   const isParent = user.role === "parent";
+  const t = useTranslation(lang);
 
   const navItems = isParent
     ? [
