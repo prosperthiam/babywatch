@@ -1,31 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Component } from "react";
 // v2.1 - fix sitter profile
 import { translations, useTranslation } from './translations.js';
 const API = 'https://babywatch-production.up.railway.app/api';
 
-const USERS = {
-  "parent@demo.fr":   { password: "demo123", role: "parent",   name: "Sophie Dupont",    avatar: "👩‍👧", id: "P001" },
-  "sitter@demo.fr":   { password: "demo123", role: "sitter",   name: "Camille Bertrand", avatar: "👩", id: "S001" },
-  "parent2@demo.fr":  { password: "demo123", role: "parent",   name: "Marc Lefevre",     avatar: "👨‍👦", id: "P002" },
-  "sitter2@demo.fr":  { password: "demo123", role: "sitter",   name: "Lucas Martin",     avatar: "👨", id: "S002" },
-};
-
-const BOOKINGS_INIT = [
-  { id: "BK001", parentId: "P001", sitterId: "S001", parentName: "Sophie Dupont", sitterName: "Camille Bertrand", sitterAvatar: "👩", date: "2026-06-18", time: "18:30", duration: "3h", status: "confirmed", camera: true,  address: "12 rue de la Paix, Paris 75001", children: 1, notes: "Emma, 8 mois. Biberon à 19h.", price: 42, createdAt: "2026-06-10" },
-  { id: "BK002", parentId: "P001", sitterId: "S002", parentName: "Sophie Dupont", sitterName: "Lucas Martin",    sitterAvatar: "👨", date: "2026-06-25", time: "19:00", duration: "4h", status: "pending",   camera: true,  address: "12 rue de la Paix, Paris 75001", children: 2, notes: "Tom (3 ans) et Léa (6 ans).", price: 52, createdAt: "2026-06-14" },
-  { id: "BK003", parentId: "P001", sitterId: "S001", parentName: "Sophie Dupont", sitterName: "Camille Bertrand", sitterAvatar: "👩", date: "2026-05-30", time: "20:00", duration: "3h", status: "completed", camera: false, address: "12 rue de la Paix, Paris 75001", children: 1, notes: "", price: 36, createdAt: "2026-05-25", rating: 5 },
-  { id: "BK004", parentId: "P001", sitterId: "S001", parentName: "Sophie Dupont", sitterName: "Camille Bertrand", sitterAvatar: "👩", date: "2026-05-10", time: "18:00", duration: "2h", status: "completed", camera: true,  address: "12 rue de la Paix, Paris 75001", children: 1, notes: "", price: 28, createdAt: "2026-05-05", rating: 5 },
-  { id: "BK005", parentId: "P002", sitterId: "S001", parentName: "Marc Lefevre",  sitterName: "Camille Bertrand", sitterAvatar: "👩", date: "2026-06-20", time: "17:30", duration: "5h", status: "confirmed", camera: true,  address: "8 avenue Foch, Paris 75016",    children: 3, notes: "Jumeaux de 2 ans + aîné de 7 ans.", price: 70, createdAt: "2026-06-12" },
-  { id: "BK006", parentId: "P002", sitterId: "S002", parentName: "Marc Lefevre",  sitterName: "Lucas Martin",    sitterAvatar: "👨", date: "2026-06-16", time: "14:00", duration: "3h", status: "pending",   camera: false, address: "8 avenue Foch, Paris 75016",    children: 1, notes: "", price: 33, createdAt: "2026-06-15" },
-];
-
-const SITTERS_LIST = [
-  { id: "S001", name: "Camille Bertrand", avatar: "👩",   age: 26, city: "Paris 11e", rating: 4.9,  missions: 127, price: 12, tags: ["Nourrissons", "Premiers secours", "Anglais"],              camera: true,  available: true,  bio: "Diplômée en éducation de la petite enfance, j'adore créer un environnement chaleureux et stimulant." },
-  { id: "S002", name: "Lucas Martin",    avatar: "👨",   age: 23, city: "Paris 15e", rating: 4.8,  missions: 89,  price: 11, tags: ["Activités créatives", "Devoirs", "Sport"],                  camera: true,  available: true,  bio: "Étudiant en STAPS, dynamique et créatif, j'aime proposer des activités sportives adaptées." },
-  { id: "S003", name: "Sofia Ramirez",   avatar: "👩",   age: 30, city: "Paris 7e",  rating: 5.0,  missions: 213, price: 14, tags: ["Éducatrice spécialisée", "Espagnol", "Multiples enfants"], camera: true,  available: true,  bio: "Éducatrice spécialisée depuis 6 ans, je m'adapte à chaque enfant avec patience et bienveillance." },
-  { id: "S004", name: "Emma Dubois",     avatar: "👧",   age: 21, city: "Paris 18e", rating: 4.7,  missions: 54,  price: 10, tags: ["Musicothérapie", "Lecture"],                                camera: false, available: false, bio: "Passionnée de musique et de littérature jeunesse, je rends chaque soir magique." },
-  { id: "S005", name: "Nadia Khoury",    avatar: "👩",   age: 35, city: "Vincennes", rating: 4.95, missions: 301, price: 16, tags: ["Infirmière", "Besoins spéciaux", "Arabe"],                  camera: true,  available: true,  bio: "Infirmière de formation, je gère avec soin les enfants aux besoins particuliers ou médicaux." },
-];
 
 const G = {
   night: "#0f1923", panel: "#162030", card: "#1e2d40",
@@ -34,6 +11,35 @@ const G = {
   purple: "#a78bfa", text: "#e2e8f0", muted: "#64748b",
   cream: "#f0f4ff", navH: 64,
 };
+
+// ─── ERROR BOUNDARY ───────────────────────────────────────────
+// Évite l'écran blanc : capture les erreurs JS et affiche un message lisible.
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { hasError:false, error:null }; }
+  static getDerivedStateFromError(error) { return { hasError:true, error }; }
+  componentDidCatch(error, info) { console.error("Erreur applicative :", error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight:"100vh", background:G.night, display:"flex", alignItems:"center", justifyContent:"center", padding:20, fontFamily:"'Inter',sans-serif" }}>
+          <div style={{ background:G.panel, border:`1px solid ${G.border}`, borderRadius:20, padding:40, maxWidth:460, textAlign:"center" }}>
+            <div style={{ fontSize:"3rem", marginBottom:16 }}>😕</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:10 }}>
+              Une erreur est survenue
+            </div>
+            <div style={{ color:G.muted, fontSize:"0.88rem", marginBottom:20, lineHeight:1.6 }}>
+              L'application a rencontré un problème inattendu. Rechargez la page pour continuer.
+            </div>
+            <button onClick={() => window.location.reload()} style={{ background:G.teal, color:"#0f1923", border:"none", borderRadius:10, padding:"12px 26px", fontFamily:"'Nunito',sans-serif", fontWeight:800, cursor:"pointer", fontSize:"0.9rem" }}>
+              Recharger la page
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const Badge = ({ color = G.teal, children, style = {} }) => (
   <span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"3px 10px", borderRadius:100, fontSize:"0.7rem", fontWeight:700, background: color+"22", color, border:`1px solid ${color}44`, ...style }}>{children}</span>
@@ -97,7 +103,7 @@ const Toast = ({ toast }) => (
 );
 
 // ─── CONFIRM PAGE ─────────────────────────────────────────────
-const ConfirmPage = ({ onLogin }) => {
+const ConfirmPage = ({ onLogin, t = (k) => k }) => {
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
@@ -145,7 +151,7 @@ const ConfirmPage = ({ onLogin }) => {
 };
 
 // ─── FORGOT PASSWORD PAGE ─────────────────────────────────────
-const ForgotPasswordPage = ({ onBack }) => {
+const ForgotPasswordPage = ({ onBack, t = (k) => k }) => {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState("form");
   const [error, setError] = useState("");
@@ -173,18 +179,18 @@ const ForgotPasswordPage = ({ onBack }) => {
           {status === "form" ? (
             <>
               <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>🔑 Mot de passe oublié</div>
-              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Entrez votre email pour recevoir un lien de réinitialisation.</div>
-              <Input label="Adresse email" type="email" value={email} onChange={setEmail} placeholder="vous@email.fr" icon="✉️" />
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('forgotPwSubtitle')}</div>
+              <Input label={t('email')} type="email" value={email} onChange={setEmail} placeholder="vous@email.fr" icon="✉️" />
               {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
-              <Btn onClick={handleSubmit} variant="teal" size="lg" full>Envoyer le lien →</Btn>
-              <button onClick={onBack} style={{ marginTop:14, width:"100%", background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", fontFamily:"'Inter',sans-serif" }}>← Retour à la connexion</button>
+              <Btn onClick={handleSubmit} variant="teal" size="lg" full>{t('sendLink')}</Btn>
+              <button onClick={onBack} style={{ marginTop:14, width:"100%", background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", fontFamily:"'Inter',sans-serif" }}>{t('backToLogin')}</button>
             </>
           ) : (
             <div style={{ textAlign:"center" }}>
               <div style={{ fontSize:"3rem", marginBottom:16 }}>📧</div>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:12 }}>Email envoyé !</div>
-              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Vérifiez votre boîte mail et cliquez sur le lien pour réinitialiser votre mot de passe.</div>
-              <Btn onClick={onBack} variant="ghost" full>← Retour à la connexion</Btn>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:12 }}>{t('emailSent')}</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('checkInboxReset')}</div>
+              <Btn onClick={onBack} variant="ghost" full>{t('backToLogin')}</Btn>
             </div>
           )}
         </div>
@@ -194,7 +200,7 @@ const ForgotPasswordPage = ({ onBack }) => {
 };
 
 // ─── RESET PASSWORD PAGE ──────────────────────────────────────
-const ResetPasswordPage = ({ onBack }) => {
+const ResetPasswordPage = ({ onBack, t = (k) => k }) => {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [status, setStatus] = useState("form");
@@ -226,18 +232,18 @@ const ResetPasswordPage = ({ onBack }) => {
           {status === "form" ? (
             <>
               <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>🔑 Nouveau mot de passe</div>
-              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Choisissez un nouveau mot de passe sécurisé.</div>
-              <Input label="Nouveau mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" icon="🔒" />
-              <Input label="Confirmer le mot de passe" type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" icon="🔒" />
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('chooseNewPw')}</div>
+              <Input label={t('newPassword')} type="password" value={password} onChange={setPassword} placeholder="••••••••" icon="🔒" />
+              <Input label={t('confirmPassword')} type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" icon="🔒" />
               {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
-              <Btn onClick={handleSubmit} variant="teal" size="lg" full>Réinitialiser →</Btn>
+              <Btn onClick={handleSubmit} variant="teal" size="lg" full>{t('resetBtn')}</Btn>
             </>
           ) : (
             <div style={{ textAlign:"center" }}>
               <div style={{ fontSize:"3rem", marginBottom:16 }}>✅</div>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:12 }}>Mot de passe mis à jour !</div>
-              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.</div>
-              <Btn onClick={() => { window.history.pushState({}, "", "/"); onBack(); }} variant="teal" full>Se connecter →</Btn>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff", marginBottom:12 }}>{t('pwUpdated')}</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('canLoginNow')}</div>
+              <Btn onClick={() => { window.history.pushState({}, "", "/"); onBack(); }} variant="teal" full>{t('loginBtn')}</Btn>
             </div>
           )}
         </div>
@@ -247,7 +253,7 @@ const ResetPasswordPage = ({ onBack }) => {
 };
 
 // ─── 2FA PAGE ─────────────────────────────────────────────────
-const TwoFactorPage = ({ userId, onSuccess, onBack }) => {
+const TwoFactorPage = ({ userId, onSuccess, onBack, t = (k) => k }) => {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -279,7 +285,7 @@ const TwoFactorPage = ({ userId, onSuccess, onBack }) => {
         <div style={{ padding:"32px" }}>
           <div style={{ textAlign:"center", marginBottom:24 }}>
             <div style={{ fontSize:"3rem", marginBottom:12 }}>🔐</div>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>Vérification en 2 étapes</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>{t('twoStepVerification')}</div>
             <div style={{ color:G.muted, fontSize:"0.85rem", lineHeight:1.6 }}>
               Un code à 6 chiffres a été envoyé à votre email. Entrez-le ci-dessous.
             </div>
@@ -319,7 +325,7 @@ const TwoFactorPage = ({ userId, onSuccess, onBack }) => {
 };
 
 // ─── AUTH PAGE ────────────────────────────────────────────────
-const AuthPage = ({ onLogin }) => {
+const AuthPage = ({ onLogin, t = (k) => k }) => {
   const [mode, setMode] = useState("login");
   const [role, setRole] = useState("parent");
   const [email, setEmail] = useState("");
@@ -358,6 +364,7 @@ if (show2FA) return (
     userId={twoFAUserId}
     onSuccess={onLogin}
     onBack={() => setShow2FA(false)}
+    t={t}
   />
 );
 
@@ -382,15 +389,14 @@ if (show2FA) return (
     }
   };
 
-  const demoLogin = (em) => { const user = USERS[em]; onLogin({ ...user, email: em }); };
 
-  if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")} />;
+  if (mode === "forgot") return <ForgotPasswordPage onBack={() => setMode("login")} t={t} />;
 
   if (mode === "success") return (
     <div style={{ minHeight:"100vh", background:G.night, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:420, padding:40, textAlign:"center" }}>
         <div style={{ fontSize:"3rem", marginBottom:16 }}>📧</div>
-        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:12 }}>Vérifiez votre email !</div>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:12 }}>{t('checkYourEmail')}</div>
         <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:24, lineHeight:1.6 }}>
           Un email de confirmation a été envoyé à<br />
           <strong style={{ color:G.teal }}>{email}</strong>
@@ -424,7 +430,7 @@ if (show2FA) return (
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"2rem", color:"#fff" }}>
           Baby<span style={{ color:G.teal }}>Watch</span>
         </div>
-        <div style={{ color:G.muted, fontSize:"0.85rem", marginTop:4 }}>La garde d'enfants en toute confiance</div>
+        <div style={{ color:G.muted, fontSize:"0.85rem", marginTop:4 }}>{t('tagline')}</div>
       </div>
 
       <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:420, overflow:"hidden", boxShadow:"0 24px 80px #0008" }}>
@@ -448,36 +454,23 @@ if (show2FA) return (
             </div>
           )}
 
-          {mode === "register" && <Input label="Prénom & Nom" value={name} onChange={setName} placeholder="Sophie Dupont" icon="👤" />}
-          <Input label="Adresse email" type="email" value={email} onChange={setEmail} placeholder="vous@email.fr" icon="✉️" />
-          <Input label="Mot de passe" type="password" value={password} onChange={setPassword} placeholder="••••••••" icon="🔒" />
+          {mode === "register" && <Input label={t('fullName')} value={name} onChange={setName} placeholder="Sophie Dupont" icon="👤" />}
+          <Input label={t('email')} type="email" value={email} onChange={setEmail} placeholder="vous@email.fr" icon="✉️" />
+          <Input label={t('password')} type="password" value={password} onChange={setPassword} placeholder="••••••••" icon="🔒" />
 
           {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
 
           {mode === "login"
-            ? <Btn onClick={handleLogin} variant="teal" size="lg" full>Se connecter →</Btn>
-            : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full>Créer mon compte →</Btn>
+            ? <Btn onClick={handleLogin} variant="teal" size="lg" full>{t('loginBtn')}</Btn>
+            : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full>{t('createAccount')}</Btn>
           }
 
           {mode === "login" && (
             <button onClick={() => setMode("forgot")} style={{ marginTop:12, width:"100%", background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem", fontFamily:"'Inter',sans-serif", textDecoration:"underline" }}>
-              Mot de passe oublié ?
+              {t('forgotPassword')}
             </button>
           )}
 
-          {mode === "login" && (
-            <div style={{ marginTop:24, paddingTop:20, borderTop:`1px solid ${G.border}` }}>
-              <div style={{ color:G.muted, fontSize:"0.72rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>Comptes démo</div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
-                <button onClick={() => demoLogin("parent@demo.fr")} style={{ padding:"10px 12px", borderRadius:10, border:`1px solid ${G.teal}44`, background:G.teal+"11", color:G.teal, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.8rem", cursor:"pointer", textAlign:"center" }}>
-                  👨‍👧 Parent<br /><span style={{ fontSize:"0.68rem", opacity:0.7 }}>Sophie Dupont</span>
-                </button>
-                <button onClick={() => demoLogin("sitter@demo.fr")} style={{ padding:"10px 12px", borderRadius:10, border:`1px solid ${G.amber}44`, background:G.amber+"11", color:G.amber, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.8rem", cursor:"pointer", textAlign:"center" }}>
-                  👩 Babysitter<br /><span style={{ fontSize:"0.68rem", opacity:0.7 }}>Camille Bertrand</span>
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
       <div style={{ color:G.muted, fontSize:"0.72rem", marginTop:20 }}>🔒 Connexion sécurisée · RGPD</div>
@@ -684,7 +677,7 @@ const ChildrenManager = ({ showToast, t = (k) => k }) => {
         <Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
       </div>
 
-      {loading && <div style={{ color:G.muted, textAlign:"center", padding:30 }}>Chargement…</div>}
+      {loading && <div style={{ color:G.muted, textAlign:"center", padding:30 }}>{t('loading')}</div>}
 
       {!loading && children.length === 0 && (
         <Card style={{ textAlign:"center", padding:40 }}>
@@ -817,15 +810,15 @@ const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
           <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:16 }}>{t('healthSafetySubtitle')}</div>
           <div style={{ marginBottom:16 }}>
             <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.coral, marginBottom:6 }}>{t('allergies')}</label>
-            <textarea value={allergies} onChange={e=>setAllergies(e.target.value)} placeholder="Arachides, lactose, pollen…" style={{ width:"100%", background:"rgba(255,95,87,0.06)", border:`1.5px solid ${G.coral}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+            <textarea value={allergies} onChange={e=>setAllergies(e.target.value)} placeholder={t('allergiesPlaceholder')} style={{ width:"100%", background:"rgba(255,95,87,0.06)", border:`1.5px solid ${G.coral}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
           <div style={{ marginBottom:16 }}>
             <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.amber, marginBottom:6 }}>{t('medications')}</label>
-            <textarea value={medications} onChange={e=>setMedications(e.target.value)} placeholder="Ventoline si toux · 1 dose max" style={{ width:"100%", background:"rgba(251,191,36,0.06)", border:`1.5px solid ${G.amber}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+            <textarea value={medications} onChange={e=>setMedications(e.target.value)} placeholder={t('medicationsPlaceholder')} style={{ width:"100%", background:"rgba(251,191,36,0.06)", border:`1.5px solid ${G.amber}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
           <div style={{ marginBottom:16 }}>
             <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('medicalNotes')}</label>
-            <textarea value={medicalNotes} onChange={e=>setMedicalNotes(e.target.value)} placeholder="Asthme léger, port de lunettes…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+            <textarea value={medicalNotes} onChange={e=>setMedicalNotes(e.target.value)} placeholder={t('medicalNotesPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
         </Card>
 
@@ -833,15 +826,15 @@ const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
           <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('habits')}</div>
           <div style={{ marginBottom:16 }}>
             <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('routines')}</label>
-            <textarea value={routines} onChange={e=>setRoutines(e.target.value)} placeholder="Biberon à 19h, histoire avant de dormir, veilleuse allumée…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:70 }} />
+            <textarea value={routines} onChange={e=>setRoutines(e.target.value)} placeholder={t('routinesPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:70 }} />
           </div>
           <div style={{ marginBottom:16 }}>
             <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('favoriteActivities')}</label>
-            <textarea value={favoriteActivities} onChange={e=>setFavoriteActivities(e.target.value)} placeholder="Dessin, puzzles, jouer dehors…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+            <textarea value={favoriteActivities} onChange={e=>setFavoriteActivities(e.target.value)} placeholder={t('activitiesPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
           <div style={{ marginBottom:16 }}>
             <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('fears')}</label>
-            <textarea value={fears} onChange={e=>setFears(e.target.value)} placeholder="Peur du noir, n'aime pas les chiens…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+            <textarea value={fears} onChange={e=>setFears(e.target.value)} placeholder={t('fearsPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
           </div>
         </Card>
 
@@ -1002,6 +995,34 @@ const ParentProfile = ({ user, showToast, t = (k) => k }) => {
   const [filterCam, setFilterCam] = useState(false);
   const [selected, setSelected] = useState(null);
   const [favorites, setFavorites] = useState([]);
+  const [sitters, setSitters] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  // Charge les vrais babysitters depuis l'API
+  useEffect(() => {
+    fetch(`${API}/profile/sitters/map`)
+      .then(r => r.json())
+      .then(data => {
+        const list = Array.isArray(data) ? data.map(s => ({
+          id: s.id,
+          name: `${s.first_name || ''} ${s.last_name || ''}`.trim(),
+          avatar: "👩",
+          city: s.city || "—",
+          rating: s.rating ? parseFloat(s.rating).toFixed(1) : null,
+          missions: s.total_missions || 0,
+          price: s.hourly_rate ? parseFloat(s.hourly_rate) : 0,
+          bio: s.bio || "",
+          tags: Array.isArray(s.skills) ? s.skills : [],
+          camera: !!s.accepts_camera,
+          available: s.available !== false,
+          verified: s.verification_status === "verified",
+        })) : [];
+        setSitters(list);
+        setLoading(false);
+      })
+      .catch(() => { setLoadError(t('loadSittersError')); setLoading(false); });
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -1026,10 +1047,11 @@ const ParentProfile = ({ user, showToast, t = (k) => k }) => {
     }
   };
 
-  const filtered = SITTERS_LIST.filter(s =>
-    (s.name.toLowerCase().includes(search.toLowerCase()) ||
-     s.city.toLowerCase().includes(search.toLowerCase()) ||
-     s.tags.some(tag => tag.toLowerCase().includes(search.toLowerCase()))) &&
+  const q = search.toLowerCase();
+  const filtered = sitters.filter(s =>
+    (s.name.toLowerCase().includes(q) ||
+     s.city.toLowerCase().includes(q) ||
+     s.tags.some(tag => String(tag).toLowerCase().includes(q))) &&
     (!filterCam || s.camera)
   );
 
@@ -1056,6 +1078,22 @@ const ParentProfile = ({ user, showToast, t = (k) => k }) => {
         </button>
       </div>
 
+      {loading && <div style={{ textAlign:"center", padding:40, color:G.muted }}>{t('loading')}</div>}
+
+      {loadError && (
+        <Card style={{ textAlign:"center", padding:30, borderColor:G.coral+"44" }}>
+          <div style={{ fontSize:"2rem", marginBottom:10 }}>⚠️</div>
+          <div style={{ color:G.coral, fontSize:"0.88rem" }}>{loadError}</div>
+        </Card>
+      )}
+
+      {!loading && !loadError && filtered.length === 0 && (
+        <Card style={{ textAlign:"center", padding:40 }}>
+          <div style={{ fontSize:"2.5rem", marginBottom:12 }}>🔍</div>
+          <div style={{ color:G.muted, fontSize:"0.88rem" }}>{t('noSitterFound')}</div>
+        </Card>
+      )}
+
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:16 }}>
         {filtered.map(s => (
           <Card key={s.id}>
@@ -1076,12 +1114,13 @@ const ParentProfile = ({ user, showToast, t = (k) => k }) => {
             <div style={{ fontSize:"0.8rem", color:G.muted, marginBottom:12, lineHeight:1.5 }}>{s.bio}</div>
 
             <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:12 }}>
+              {s.verified && <Badge color={G.green}>{t('verified')}</Badge>}
               {s.tags.map(tag => <Badge key={tag} color={G.purple}>{tag}</Badge>)}
               {s.camera && <Badge color={G.teal}>📹 {t('cameraBadge')}</Badge>}
             </div>
 
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", borderTop:`1px solid ${G.border}`, paddingTop:12 }}>
-              <div style={{ fontSize:"0.82rem", color:G.muted }}>⭐ {s.rating} · {s.missions} {t('bookingsCount')}</div>
+              <div style={{ fontSize:"0.82rem", color:G.muted }}>⭐ {s.rating || "—"} · {s.missions} {t('bookingsCount')}</div>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <button onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }} style={{ background:"none", border:"none", fontSize:"1.3rem", cursor:"pointer", padding:4 }}>
                   {favorites.includes(s.id) ? "❤️" : "🤍"}
@@ -1157,6 +1196,7 @@ const BookingForm = ({ sitter, onBack, onConfirm, t = (k) => k }) => {
               onClose={() => setShowPayment(false)}
               onSuccess={() => onConfirm({ id:"BK"+Date.now(), sitterId:sitter.id, sitterName:sitter.name, sitterAvatar:sitter.avatar, date, time, duration:duration+"h", children:childrenCount, address, notes, camera, status:"confirmed", price, createdAt:new Date().toISOString().slice(0,10) })}
               showToast={() => {}}
+              t={t}
             />
           )}
           <div style={{ marginBottom:20 }}>
@@ -1218,7 +1258,7 @@ const BookingForm = ({ sitter, onBack, onConfirm, t = (k) => k }) => {
 };
 
 // ─── REVIEW MODAL ─────────────────────────────────────────────
-const ReviewModal = ({ booking, onClose, onSubmit }) => {
+const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
   const [rating, setRating] = useState(5);
   const [review, setReview] = useState("");
   const [loading, setLoading] = useState(false);
@@ -1260,7 +1300,7 @@ const ReviewModal = ({ booking, onClose, onSubmit }) => {
         <div style={{ padding:"28px" }}>
           {/* Étoiles */}
           <div style={{ marginBottom:20 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:10 }}>Note globale</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:10 }}>{t('globalRating')}</label>
             <div style={{ display:"flex", gap:8 }}>
               {[1,2,3,4,5].map(star => (
                 <button key={star} onClick={() => setRating(star)} style={{ background:"none", border:"none", fontSize:"2rem", cursor:"pointer", opacity: star <= rating ? 1 : 0.25, transform: star <= rating ? "scale(1.1)" : "scale(1)", transition:"all 0.15s" }}>
@@ -1291,11 +1331,11 @@ const ReviewModal = ({ booking, onClose, onSubmit }) => {
 
           {/* Commentaire */}
           <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Votre commentaire</label>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('yourComment')}</label>
             <textarea
               value={review}
               onChange={e => setReview(e.target.value)}
-              placeholder="Décrivez votre expérience avec ce babysitter… Était-il/elle ponctuel(le) ? Comment se sont passées les interactions avec votre enfant ?"
+              placeholder={t('reviewPlaceholder')}
               style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"12px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:110, lineHeight:1.6 }}
             />
             <div style={{ textAlign:"right", fontSize:"0.72rem", color:G.muted, marginTop:4 }}>{review.length}/300</div>
@@ -1313,7 +1353,7 @@ const ReviewModal = ({ booking, onClose, onSubmit }) => {
           {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
 
           <div style={{ display:"flex", gap:10 }}>
-            <Btn onClick={onClose} variant="ghost" full>Annuler</Btn>
+            <Btn onClick={onClose} variant="ghost" full>{t('cancel')}</Btn>
             <Btn onClick={handleSubmit} variant="teal" full disabled={loading}>
               {loading ? "Publication…" : "✅ Publier mon avis →"}
             </Btn>
@@ -1343,6 +1383,7 @@ const ParentBookings = ({ user, bookings, onCancel, onNav, onReview, t = (k) => 
             onReview(id, rating, review);
             setReviewBooking(null);
           }}
+          t={t}
         />
       )}
       {chatBooking && (
@@ -1350,6 +1391,7 @@ const ParentBookings = ({ user, bookings, onCancel, onNav, onReview, t = (k) => 
           booking={chatBooking}
           user={user}
           onClose={() => setChatBooking(null)}
+          t={t}
         />
       )}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
@@ -1483,6 +1525,7 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) =
           booking={chatBooking}
           user={user}
           onClose={() => setChatBooking(null)}
+          t={t}
         />
       )}
       <div style={{ marginBottom:20 }}>
@@ -1531,10 +1574,10 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) =
 };
 
 // ─── AVAILABILITY CALENDAR ────────────────────────────────────
-const DAYS = ["Dimanche","Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi"];
+const DAY_KEYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 const HOURS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00"];
 
-const AvailabilityCalendar = ({ showToast }) => {
+const AvailabilityCalendar = ({ showToast, t = (k) => k }) => {
   const [slots, setSlots] = useState([]);
   const [exceptions, setExceptions] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -1621,15 +1664,15 @@ const AvailabilityCalendar = ({ showToast }) => {
       <Card style={{ marginBottom:20, overflowX:"auto" }}>
         <div style={{ display:"grid", gridTemplateColumns:`70px repeat(7, minmax(70px,1fr))`, gap:3, minWidth:600 }}>
           <div />
-          {DAYS.map(d => (
+          {DAY_KEYS.map(dk => { const d = t(dk); return (
             <div key={d} style={{ textAlign:"center", fontSize:"0.7rem", fontWeight:700, color:G.muted, paddingBottom:6 }}>
               {d.slice(0,3)}
             </div>
-          ))}
+          ); })}
           {HOURS.slice(0,-1).map(hour => (
             <>
               <div key={"h"+hour} style={{ fontSize:"0.68rem", color:G.muted, textAlign:"right", paddingRight:8, alignSelf:"center" }}>{hour}</div>
-              {DAYS.map((_, dayIdx) => {
+              {DAY_KEYS.map((_, dayIdx) => {
                 const on = isSelected(dayIdx, hour);
                 return (
                   <div
@@ -1662,10 +1705,10 @@ const AvailabilityCalendar = ({ showToast }) => {
       {/* Blocage de dates */}
       <Card>
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>🚫 Bloquer des dates</div>
-        <div style={{ color:G.muted, fontSize:"0.8rem", marginBottom:14 }}>Vacances, examens, indisponibilités ponctuelles…</div>
+        <div style={{ color:G.muted, fontSize:"0.8rem", marginBottom:14 }}>{t('availabilityBlockHint')}</div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1.5fr auto", gap:10, alignItems:"end" }}>
-          <Input label="Date" type="date" value={blockDate} onChange={setBlockDate} />
-          <Input label="Raison (optionnel)" value={blockReason} onChange={setBlockReason} placeholder="Vacances" />
+          <Input label={t('date')} type="date" value={blockDate} onChange={setBlockDate} />
+          <Input label={t('reasonOptional')} value={blockReason} onChange={setBlockReason} />
           <div style={{ marginBottom:16 }}>
             <Btn onClick={blockDay} variant="danger">🚫 Bloquer</Btn>
           </div>
@@ -1686,21 +1729,19 @@ const AvailabilityCalendar = ({ showToast }) => {
   );
 };
 // ─── SITTER PROFILE ───────────────────────────────────────────
-const SitterProfile = ({ user, bookings, showToast }) => {
+const SitterProfile = ({ user, bookings, showToast, t = (k) => k }) => {
   const my = bookings.filter(b => b.sitterId === user.id && b.status === "completed");
-  const [tab, setTab] = useState("profile"); // profile | identity | stats
+  const [tab, setTab] = useState("profile"); // profile | availability | identity | stats
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyStatus, setVerifyStatus] = useState("unverified");
- 
- 
-  
+
   // Champs du profil
   const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
   const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
-   const [address, setAddress] = useState("");
+  const [address, setAddress] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [country, setCountry] = useState("France");
   const [birthDate, setBirthDate] = useState("");
@@ -1711,6 +1752,7 @@ const SitterProfile = ({ user, bookings, showToast }) => {
   const [newSkill, setNewSkill] = useState("");
   const [available, setAvailable] = useState(true);
   const [acceptsCamera, setAcceptsCamera] = useState(true);
+  const [twoFAEnabled, setTwoFAEnabled] = useState(false);
 
   // Vérification identité
   const [docType, setDocType] = useState("carte_identite");
@@ -1718,43 +1760,43 @@ const SitterProfile = ({ user, bookings, showToast }) => {
   const [uploadedUrl, setUploadedUrl] = useState("");
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadError, setUploadError] = useState("");
-const geocodeAddress = async (addr, cty, postal) => {
-  try {
-    const query = `${addr} ${postal} ${cty} France`;
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
-    const data = await res.json();
-    if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-  } catch(e) { console.error(e); }
-  return null;
-};
 
-const handleUploadId = async (file) => {
-  if (!file) return;
-  setUploadingDoc(true);
-  setUploadError("");
-  try {
-    const token = localStorage.getItem('token');
-    const formData = new FormData();
-    formData.append('document', file);
-    const res = await fetch(`${API}/profile/sitter/upload-id`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}` },
-      body: formData
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setUploadedUrl(data.url);
-      setVerifyStatus("pending");
-      showToast("✅ " + data.message, "ok");
-    } else {
-      setUploadError(data.error);
+  const geocodeAddress = async (addr, cty, postal) => {
+    try {
+      const query = `${addr} ${postal} ${cty} France`;
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1`);
+      const data = await res.json();
+      if (data.length > 0) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    } catch(e) { console.error(e); }
+    return null;
+  };
+
+  const handleUploadId = async (file) => {
+    if (!file) return;
+    setUploadingDoc(true);
+    setUploadError("");
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('document', file);
+      const res = await fetch(`${API}/profile/sitter/upload-id`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUploadedUrl(data.url);
+        setVerifyStatus("pending");
+        showToast("✅ " + data.message, "ok");
+      } else {
+        setUploadError(data.error);
+      }
+    } catch(e) {
+      setUploadError(t('connectionError'));
     }
-  } catch(e) {
-    setUploadError("Erreur de connexion.");
-  }
-  setUploadingDoc(false);
-};
-
+    setUploadingDoc(false);
+  };
 
   // Charger le profil
   useEffect(() => {
@@ -1769,58 +1811,65 @@ const handleUploadId = async (file) => {
       if (data.last_name) setLastName(data.last_name);
       if (data.phone) setPhone(data.phone || "");
       if (data.city) setCity(data.city || "");
+      if (data.address) setAddress(data.address || "");
+      if (data.postal_code) setPostalCode(data.postal_code || "");
+      if (data.country) setCountry(data.country || "France");
+      if (data.birth_date) setBirthDate(data.birth_date?.slice(0,10) || "");
+      if (data.birth_place) setBirthPlace(data.birth_place || "");
       if (data.bio) setBio(data.bio || "");
       if (data.hourly_rate) setHourlyRate(String(data.hourly_rate));
       if (data.skills) setSkills(data.skills || []);
       if (data.available !== undefined) setAvailable(data.available);
       if (data.accepts_camera !== undefined) setAcceptsCamera(data.accepts_camera);
       if (data.verification_status) setVerifyStatus(data.verification_status);
+      if (data.two_factor_enabled !== undefined) setTwoFAEnabled(data.two_factor_enabled);
     })
     .catch(console.error);
   }, []);
 
- const handleSave = async () => {
-  setSaving(true);
-  try {
-    const token = localStorage.getItem('token');
-    
-    // Géocoder l'adresse
-    const coords = await geocodeAddress(address, city, postalCode);
-    
-    const res = await fetch(`${API}/profile/sitter/complete`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-      body: JSON.stringify({ 
-        firstName, lastName, phone, address, postalCode, city, 
-        country, birthDate, birthPlace,
-        latitude: coords?.lat || null,
-        longitude: coords?.lng || null,
-        bio, hourlyRate: parseFloat(hourlyRate), 
-        skills, available, acceptsCamera 
-      })
-    });
-    const data = await res.json();
-    if (res.ok) showToast("✅ Profil mis à jour !", "ok");
-    else showToast("❌ " + data.error, "err");
-  } catch(e) {
-    showToast("❌ Erreur de connexion.", "err");
-  }
-  setSaving(false);
-};
-const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const coords = await geocodeAddress(address, city, postalCode);
+      const res = await fetch(`${API}/profile/sitter/complete`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          firstName, lastName, phone, address, postalCode, city,
+          country, birthDate, birthPlace,
+          latitude: coords?.lat || null,
+          longitude: coords?.lng || null,
+          bio, hourlyRate: parseFloat(hourlyRate),
+          skills, available, acceptsCamera
+        })
+      });
+      const data = await res.json();
+      if (res.ok) showToast("✅ " + t('profileUpdated'), "ok");
+      else showToast("❌ " + data.error, "err");
+    } catch(e) {
+      showToast("❌ " + t('connectionError'), "err");
+    }
+    setSaving(false);
+  };
 
-const toggleTwoFA = async () => {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API}/auth/toggle-2fa`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  const data = await res.json();
-  if (res.ok) { setTwoFAEnabled(data.enabled); showToast(data.message, "ok"); }
-};
+  const toggleTwoFA = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/auth/toggle-2fa`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (res.ok) { setTwoFAEnabled(data.enabled); showToast(data.message, "ok"); }
+      else showToast("❌ " + data.error, "err");
+    } catch(e) {
+      showToast("❌ " + t('connectionError'), "err");
+    }
+  };
 
   const handleVerifyIdentity = async () => {
-    if (!docNumber || !birthDate) { showToast("⚠️ Remplissez tous les champs.", "err"); return; }
+    if (!docNumber || !birthDate) { showToast(t('fillAllFields'), "err"); return; }
     setVerifying(true);
     try {
       const token = localStorage.getItem('token');
@@ -1833,7 +1882,7 @@ const toggleTwoFA = async () => {
       if (res.ok) { showToast("✅ " + data.message, "ok"); setVerifyStatus("pending"); }
       else showToast("❌ " + data.error, "err");
     } catch(e) {
-      showToast("❌ Erreur de connexion.", "err");
+      showToast("❌ " + t('connectionError'), "err");
     }
     setVerifying(false);
   };
@@ -1847,10 +1896,11 @@ const toggleTwoFA = async () => {
   const removeSkill = (skill) => setSkills(prev => prev.filter(s => s !== skill));
 
   const verifyBadge = () => {
-    if (verifyStatus === "verified") return <Badge color={G.green}>✅ Identité vérifiée</Badge>;
-    if (verifyStatus === "pending")  return <Badge color={G.amber}>⏳ Vérification en cours</Badge>;
-    return <Badge color={G.coral}>❌ Non vérifié</Badge>;
+    if (verifyStatus === "verified") return <Badge color={G.green}>{t('verified')}</Badge>;
+    if (verifyStatus === "pending")  return <Badge color={G.amber}>{t('verifying')}</Badge>;
+    return <Badge color={G.coral}>{t('notVerified')}</Badge>;
   };
+
 
   return (
     <div>
@@ -1863,13 +1913,13 @@ const toggleTwoFA = async () => {
           <div style={{ marginTop:8 }}>{verifyBadge()}</div>
         </div>
         <Btn onClick={handleSave} variant="amber" disabled={saving}>
-          {saving ? "Sauvegarde…" : "💾 Sauvegarder"}
+          {saving ? t('saving') : t('save')}
         </Btn>
       </div>
 
       {/* Tabs */}
       <div style={{ display:"flex", gap:6, marginBottom:24, borderBottom:`1px solid ${G.border}`, paddingBottom:0 }}>
-        {[["profile","👤 Mon profil"],["availability","📅 Disponibilités"],["identity","🪪 Vérification identité"],["stats","📊 Mes statistiques"]].map(([id,label]) => (
+        {[["profile", t('myProfile')],["availability", "📅 " + t('availability')],["identity", t('identityVerification')],["stats", t('myStats')]].map(([id,label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ padding:"10px 18px", background:"none", border:"none", borderBottom: tab===id?`2px solid ${G.amber}`:"2px solid transparent", color: tab===id?G.amber:G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem", cursor:"pointer", marginBottom:"-1px" }}>
             {label}
           </button>
@@ -1880,40 +1930,37 @@ const toggleTwoFA = async () => {
       {tab === "profile" && (
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
           <Card>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Informations personnelles</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('personalInfo')}</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              <Input label="Prénom" value={firstName} onChange={setFirstName} placeholder="Camille" />
-              <Input label="Nom" value={lastName} onChange={setLastName} placeholder="Bertrand" />
+              <Input label={t('firstName')} value={firstName} onChange={setFirstName} placeholder="Camille" />
+              <Input label={t('lastName')} value={lastName} onChange={setLastName} placeholder="Bertrand" />
             </div>
-            <Input label="Téléphone" value={phone} onChange={setPhone} placeholder="+33 6 12 34 56 78" icon="📱" />
-            <Input label="Ville" value={city} onChange={setCity} placeholder="Paris 11e" icon="📍" />
-            <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
-            <Input label="Lieu de naissance" value={birthPlace} onChange={setBirthPlace} placeholder="Paris, France" icon="📍" />
-            <Input label="Adresse" value={address} onChange={setAddress} placeholder="12 rue de la Paix" icon="🏠" />
+            <Input label={t('phone')} value={phone} onChange={setPhone} placeholder="+33 6 12 34 56 78" icon="📱" />
+            <Input label={t('birthDate')} type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
+            <Input label={t('birthPlace')} value={birthPlace} onChange={setBirthPlace} placeholder="Paris, France" icon="📍" />
+            <Input label={t('address')} value={address} onChange={setAddress} placeholder="12 rue de la Paix" icon="🏠" />
             <div style={{ display:"grid", gridTemplateColumns:"1fr 2fr", gap:12 }}>
-              <Input label="Code postal" value={postalCode} onChange={setPostalCode} placeholder="75011" />
-            <Input label="Ville" value={city} onChange={setCity} placeholder="Paris 11e" icon="📍" />
-              <Input label="Ville" value={city} onChange={setCity} placeholder="Paris" />
+              <Input label={t('postalCode')} value={postalCode} onChange={setPostalCode} placeholder="75011" />
+              <Input label={t('city')} value={city} onChange={setCity} placeholder="Paris" icon="📍" />
             </div>
             <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Pays</label>
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('country')}</label>
               <select value={country} onChange={e=>setCountry(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
                 {["France","Belgique","Suisse","Canada","Maroc","Sénégal","Côte d'Ivoire","Algérie","Tunisie","Autre"].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-           <Input label="Tarif horaire (€/h)" type="number" value={hourlyRate} onChange={setHourlyRate} placeholder="12" icon="💶" />
-         
+            <Input label={t('hourlyRate')} type="number" value={hourlyRate} onChange={setHourlyRate} placeholder="12" icon="💶" />
           </Card>
 
           <Card>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Bio & Compétences</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('bioSkills')}</div>
             <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Bio</label>
-              <textarea value={bio} onChange={e=>setBio(e.target.value)} placeholder="Décrivez votre expérience, vos qualités, ce qui vous distingue…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:100 }} />
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('bio')}</label>
+              <textarea value={bio} onChange={e=>setBio(e.target.value)} placeholder={t('bioPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:100 }} />
             </div>
 
             <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>Compétences</label>
+              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>{t('skills')}</label>
               <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:10 }}>
                 {skills.map(s => (
                   <span key={s} style={{ display:"inline-flex", alignItems:"center", gap:5, background:G.purple+"22", color:G.purple, border:`1px solid ${G.purple}44`, borderRadius:100, padding:"3px 10px", fontSize:"0.75rem", fontWeight:600 }}>
@@ -1923,17 +1970,17 @@ const toggleTwoFA = async () => {
                 ))}
               </div>
               <div style={{ display:"flex", gap:8 }}>
-                <input value={newSkill} onChange={e=>setNewSkill(e.target.value)} onKeyPress={e=>e.key==="Enter"&&addSkill()} placeholder="Ajouter une compétence…" style={{ flex:1, background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"8px 12px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.82rem", outline:"none" }} />
-                <Btn onClick={addSkill} variant="ghost" size="sm">+ Ajouter</Btn>
+                <input value={newSkill} onChange={e=>setNewSkill(e.target.value)} onKeyPress={e=>e.key==="Enter"&&addSkill()} placeholder={t('addSkill')} style={{ flex:1, background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"8px 12px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.82rem", outline:"none" }} />
+                <Btn onClick={addSkill} variant="ghost" size="sm">{t('add')}</Btn>
               </div>
             </div>
           </Card>
 
           <Card>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Préférences</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('preferences')}</div>
             {[
-              { label:"Disponible pour nouvelles gardes", sub:"Votre profil apparaît dans les recherches", val:available, set:setAvailable, color:G.green },
-              { label:"J'accepte la surveillance caméra", sub:"Les parents peuvent activer le flux vidéo", val:acceptsCamera, set:setAcceptsCamera, color:G.teal },
+              { label:t('availableForBookings'), sub:t('availableDesc'), val:available, set:setAvailable, color:G.green },
+              { label:t('acceptCamera'), sub:t('acceptCameraDesc'), val:acceptsCamera, set:setAcceptsCamera, color:G.teal },
             ].map(opt => (
               <div key={opt.label} onClick={() => opt.set(!opt.val)} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", borderBottom:`1px solid ${G.border}`, cursor:"pointer" }}>
                 <div style={{ flex:1 }}>
@@ -1948,89 +1995,95 @@ const toggleTwoFA = async () => {
           </Card>
 
           <Card>
-  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>Documents certifiés</div>
-  {[
-    { label:"🆔 Pièce d'identité", status: verifyStatus==="verified"?"Vérifiée ✓":verifyStatus==="pending"?"En cours…":"Non vérifiée", color: verifyStatus==="verified"?G.green:verifyStatus==="pending"?G.amber:G.coral },
-    { label:"🏥 Premiers secours", status:"À renseigner", color:G.muted },
-    { label:"🚔 Casier judiciaire", status:"À renseigner", color:G.muted },
-  ].map(d => (
-    <div key={d.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
-      <span style={{ color:G.text, fontSize:"0.85rem" }}>{d.label}</span>
-      <span style={{ color:d.color, fontWeight:600, fontSize:"0.75rem" }}>{d.status}</span>
-    </div>
-  ))}
-  <button onClick={() => setTab("identity")} style={{ marginTop:14, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>
-    → Vérifier mon identité
-  </button>
-</Card>
-<Card>
-  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>🔐 Sécurité</div>
-  <div onClick={toggleTwoFA} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", cursor:"pointer" }}>
-    <div style={{ flex:1 }}>
-      <div style={{ fontWeight:600, color:G.text, fontSize:"0.88rem" }}>Authentification à deux facteurs</div>
-      <div style={{ color:G.muted, fontSize:"0.75rem", marginTop:2 }}>Un code email est requis à chaque connexion</div>
-    </div>
-    <div style={{ width:44, height:24, background:twoFAEnabled?G.teal:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
-      <div style={{ position:"absolute", top:3, left:twoFAEnabled?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
-    </div>
-  </div>
-</Card>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('certifiedDocs')}</div>
+            {[
+              { label:t('idDocument'), status: verifyStatus==="verified"?t('verifiedCheck'):verifyStatus==="pending"?t('inProgressDots'):t('notVerifiedShort'), color: verifyStatus==="verified"?G.green:verifyStatus==="pending"?G.amber:G.coral },
+              { label:t('firstAid'), status:t('toProvide'), color:G.muted },
+              { label:t('criminalRecord'), status:t('toProvide'), color:G.muted },
+            ].map(d => (
+              <div key={d.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
+                <span style={{ color:G.text, fontSize:"0.85rem" }}>{d.label}</span>
+                <span style={{ color:d.color, fontWeight:600, fontSize:"0.75rem" }}>{d.status}</span>
+              </div>
+            ))}
+            <button onClick={() => setTab("identity")} style={{ marginTop:14, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>
+              {t('verifyIdentity')}
+            </button>
+          </Card>
+
+          <Card>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>{t('security')}</div>
+            <div onClick={toggleTwoFA} style={{ display:"flex", alignItems:"center", gap:14, padding:"14px 0", cursor:"pointer" }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontWeight:600, color:G.text, fontSize:"0.88rem" }}>{t('twoFactor')}</div>
+                <div style={{ color:G.muted, fontSize:"0.75rem", marginTop:2 }}>{t('twoFactorDesc')}</div>
+              </div>
+              <div style={{ width:44, height:24, background:twoFAEnabled?G.teal:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
+                <div style={{ position:"absolute", top:3, left:twoFAEnabled?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
+              </div>
+            </div>
+          </Card>
         </div>
       )}
-{tab === "availability" && <AvailabilityCalendar showToast={showToast} />}
+
+      {tab === "availability" && <AvailabilityCalendar showToast={showToast} t={t} />}
+
       {/* ── TAB IDENTITÉ ── */}
       {tab === "identity" && (
         <div style={{ maxWidth:600 }}>
           {verifyStatus === "verified" && (
             <Card style={{ borderColor:G.green+"44", marginBottom:20, textAlign:"center" }}>
               <div style={{ fontSize:"2.5rem", marginBottom:12 }}>✅</div>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:"#fff", fontSize:"1.2rem", marginBottom:8 }}>Identité vérifiée</div>
-              <div style={{ color:G.muted, fontSize:"0.85rem" }}>Votre identité a été vérifiée par notre équipe. Un badge apparaît sur votre profil.</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:"#fff", fontSize:"1.2rem", marginBottom:8 }}>{t('identity')} {t('verified')}</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('verifiedByTeam')}</div>
             </Card>
           )}
 
           {verifyStatus === "pending" && (
             <Card style={{ borderColor:G.amber+"44", marginBottom:20, textAlign:"center" }}>
               <div style={{ fontSize:"2.5rem", marginBottom:12 }}>⏳</div>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:"#fff", fontSize:"1.2rem", marginBottom:8 }}>Vérification en cours</div>
-              <div style={{ color:G.muted, fontSize:"0.85rem" }}>Notre équipe vérifie votre identité. Vous recevrez un email dans les 24-48 heures.</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:"#fff", fontSize:"1.2rem", marginBottom:8 }}>{t('verifying')}</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('teamVerifying')}</div>
             </Card>
           )}
 
           {verifyStatus === "unverified" && (
             <Card>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>🪪 Vérification d'identité</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>{t('identityVerification')}</div>
               <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20, lineHeight:1.6 }}>
-                La vérification d'identité renforce la confiance des parents. Un badge ✅ apparaîtra sur votre profil une fois vérifié.
+                {t('verificationConfidence')}
               </div>
 
               <div style={{ background:G.teal+"11", border:`1px solid ${G.teal}33`, borderRadius:10, padding:14, marginBottom:20 }}>
                 <div style={{ fontSize:"0.82rem", color:G.muted, lineHeight:1.8 }}>
-                  📋 Ce dont vous avez besoin :<br/>
-                  • Carte nationale d'identité <strong style={{color:G.text}}>OU</strong> Passeport<br/>
-                  • Date de naissance<br/>
-                  • Les informations doivent correspondre à votre compte
+                  {t('whatYouNeed')}<br/>
+                  • {t('nationalIdCard')} <strong style={{color:G.text}}>{t('orWord')}</strong> {t('passportWord')}<br/>
+                  • {t('dateOfBirthReq')}<br/>
+                  • {t('infoMustMatch')}
                 </div>
               </div>
 
               <div style={{ marginBottom:16 }}>
-                <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Type de document</label>
+                <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('documentType')}</label>
                 <select value={docType} onChange={e=>setDocType(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
-                  <option value="carte_identite">🪪 Carte nationale d'identité</option>
-                  <option value="passeport">📕 Passeport</option>
-                  <option value="titre_sejour">📄 Titre de séjour</option>
+                  <option value="carte_identite">🪪 {t('nationalIdCard')}</option>
+                  <option value="passeport">📕 {t('passportWord')}</option>
+                  <option value="titre_sejour">📄 {t('docResidencePermit')}</option>
                 </select>
               </div>
-                          <div style={{ background:G.card, borderRadius:8, padding:"10px 12px", marginBottom:16, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
-                {docType==="carte_identite" && "📋 Prenez une photo nette du recto de votre CNI. Assurez-vous que le nom, prénom et numéro sont lisibles."}
-                {docType==="passeport" && "📋 Photographiez la page principale de votre passeport avec votre photo et vos informations personnelles."}
-                {docType==="titre_sejour" && "📋 Prenez une photo nette du recto de votre titre de séjour en cours de validité."}
+
+              <div style={{ background:G.card, borderRadius:8, padding:"10px 12px", marginBottom:16, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
+                {docType==="carte_identite" && t('docInstructionsCNI')}
+                {docType==="passeport" && t('docInstructionsPassport')}
+                {docType==="titre_sejour" && t('docInstructionsResidence')}
               </div>
-             <Input label="Numéro du document" value={docNumber} onChange={setDocNumber} placeholder="Ex: 123456789" icon="🔢" />
-              <Input label="Date de naissance" type="date" value={birthDate} onChange={setBirthDate} />
-           <div style={{ marginBottom:20 }}>
+
+              <Input label={t('documentNumber')} value={docNumber} onChange={setDocNumber} placeholder="Ex: 123456789" icon="🔢" />
+              <Input label={t('birthDate')} type="date" value={birthDate} onChange={setBirthDate} />
+
+              <div style={{ marginBottom:20 }}>
                 <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>
-                  📷 Photo de votre {docType==="carte_identite"?"Carte Nationale d'Identité (recto)":docType==="passeport"?"Passeport (page principale)":"Titre de séjour (recto)"}
+                  {t('photoOfYour')} {docType==="carte_identite"?t('fullCNI'):docType==="passeport"?t('fullPassport'):t('fullResidencePermit')}
                 </label>
                 <div style={{ border:`2px dashed ${G.border}`, borderRadius:12, padding:20, textAlign:"center", cursor:"pointer", background:"rgba(255,255,255,0.02)", position:"relative" }}
                   onDragOver={e => e.preventDefault()}
@@ -2039,92 +2092,43 @@ const toggleTwoFA = async () => {
                   {uploadedUrl ? (
                     <div>
                       <div style={{ fontSize:"2rem", marginBottom:8 }}>✅</div>
-                      <div style={{ color:G.green, fontWeight:600, fontSize:"0.85rem" }}>Document uploadé !</div>
-                      <div style={{ color:G.muted, fontSize:"0.72rem", marginTop:4 }}>Cliquez pour changer</div>
+                      <div style={{ color:G.green, fontWeight:600, fontSize:"0.85rem" }}>{t('documentUploaded')}</div>
+                      <div style={{ color:G.muted, fontSize:"0.72rem", marginTop:4 }}>{t('clickToChange')}</div>
                     </div>
                   ) : uploadingDoc ? (
                     <div>
                       <div style={{ fontSize:"1.5rem", marginBottom:8 }}>⏳</div>
-                      <div style={{ color:G.muted, fontSize:"0.85rem" }}>Upload en cours…</div>
+                      <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('uploadingInProgress')}</div>
                     </div>
                   ) : (
                     <div>
                       <div style={{ fontSize:"2.5rem", marginBottom:8, opacity:0.4 }}>{docType==="carte_identite"?"🪪":docType==="passeport"?"📕":"📄"}</div>
                       <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:4 }}>
-                        Glissez votre {docType==="carte_identite"?"CNI":docType==="passeport"?"passeport":"titre de séjour"} ici
+                        {t('dragYourDocument')} {docType==="carte_identite"?t('docCNI'):docType==="passeport"?t('docPassport'):t('docResidencePermit')} {t('here')}
                       </div>
-                      <div style={{ color:G.muted, fontSize:"0.72rem" }}>ou cliquez pour sélectionner · JPG, PNG · Max 5MB</div>
+                      <div style={{ color:G.muted, fontSize:"0.72rem" }}>{t('dragDropOrClick')}</div>
                     </div>
                   )}
                 </div>
                 {uploadError && <div style={{ color:G.coral, fontSize:"0.78rem", marginTop:8 }}>⚠️ {uploadError}</div>}
               </div>
+
               <div style={{ background:"rgba(251,191,36,0.08)", border:`1px solid ${G.amber}33`, borderRadius:10, padding:12, marginBottom:20, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
-                🔒 <strong style={{color:G.text}}>Confidentialité :</strong> Vos informations sont chiffrées et utilisées uniquement pour la vérification. Elles ne sont jamais partagées avec les parents.
+                🔒 <strong style={{color:G.text}}>{t('confidentialityLabel')}</strong> {t('confidentialityNote')}
               </div>
 
-{/* Instructions selon type de document */}
-<div style={{ background:G.card, borderRadius:8, padding:"10px 12px", marginBottom:16, fontSize:"0.78rem", color:G.muted, lineHeight:1.6 }}>
-  {docType === "carte_identite" && "📋 Prenez une photo nette du recto de votre CNI. Assurez-vous que le nom, prénom et numéro sont lisibles."}
-  {docType === "passeport" && "📋 Photographiez la page principale de votre passeport avec votre photo et vos informations personnelles."}
-  {docType === "titre_sejour" && "📋 Prenez une photo nette du recto de votre titre de séjour en cours de validité."}
-</div>
-
-{/* Zone upload */}
-<div style={{ marginBottom:20 }}>
-  <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>
-    📷 Photo de votre {
-      docType === "carte_identite" ? "Carte Nationale d'Identité (recto)" :
-      docType === "passeport" ? "Passeport (page principale)" :
-      "Titre de séjour (recto)"
-    }
-  </label>
-  <div style={{ border:`2px dashed ${G.border}`, borderRadius:12, padding:20, textAlign:"center", cursor:"pointer", background:"rgba(255,255,255,0.02)", position:"relative" }}
-    onDragOver={e => e.preventDefault()}
-    onDrop={e => { e.preventDefault(); handleUploadId(e.dataTransfer.files[0]); }}>
-    <input type="file" accept="image/*" onChange={e => handleUploadId(e.target.files[0])} style={{ position:"absolute", inset:0, opacity:0, cursor:"pointer" }} />
-    {uploadedUrl ? (
-      <div>
-        <div style={{ fontSize:"2rem", marginBottom:8 }}>✅</div>
-        <div style={{ color:G.green, fontWeight:600, fontSize:"0.85rem" }}>Document uploadé !</div>
-        <div style={{ color:G.muted, fontSize:"0.72rem", marginTop:4 }}>Cliquez pour changer</div>
-      </div>
-    ) : uploadingDoc ? (
-      <div>
-        <div style={{ fontSize:"1.5rem", marginBottom:8 }}>⏳</div>
-        <div style={{ color:G.muted, fontSize:"0.85rem" }}>Upload en cours…</div>
-      </div>
-    ) : (
-      <div>
-        <div style={{ fontSize:"2.5rem", marginBottom:8, opacity:0.4 }}>
-          {docType === "carte_identite" ? "🪪" : docType === "passeport" ? "📕" : "📄"}
-        </div>
-        <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:4 }}>
-          Glissez votre {
-            docType === "carte_identite" ? "CNI" :
-            docType === "passeport" ? "passeport" :
-            "titre de séjour"
-          } ici
-        </div>
-        <div style={{ color:G.muted, fontSize:"0.72rem" }}>ou cliquez pour sélectionner · JPG, PNG · Max 5MB</div>
-      </div>
-    )}
-  </div>
-  {uploadError && <div style={{ color:G.coral, fontSize:"0.78rem", marginTop:8 }}>⚠️ {uploadError}</div>}
-</div>
-
               <Btn onClick={handleVerifyIdentity} variant="teal" size="lg" full disabled={verifying}>
-                {verifying ? "Envoi en cours…" : "📤 Soumettre pour vérification →"}
+                {verifying ? t('sending') : t('submitVerification')}
               </Btn>
             </Card>
           )}
 
           <Card style={{ marginTop:16 }}>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Comment ça fonctionne ?</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>{t('howItWorks')}</div>
             {[
-              ["1️⃣", "Soumettez vos informations", "Remplissez le formulaire avec les infos de votre document d'identité"],
-              ["2️⃣", "Vérification par notre équipe", "Notre équipe vérifie vos informations sous 24-48h"],
-              ["3️⃣", "Badge ✅ sur votre profil", "Les parents voient que vous êtes vérifié et font plus confiance"],
+              ["1️⃣", t('step1Title'), t('step1Desc')],
+              ["2️⃣", t('step2Title'), t('step2Desc')],
+              ["3️⃣", t('step3Title'), t('step3Desc')],
             ].map(([num, title, desc]) => (
               <div key={title} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
                 <span style={{ fontSize:"1.2rem", flexShrink:0 }}>{num}</span>
@@ -2142,12 +2146,12 @@ const toggleTwoFA = async () => {
       {tab === "stats" && (
         <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:16 }}>
           {[
-            { icon:"✅", label:"Missions réalisées", val:my.length, color:G.green },
-            { icon:"💰", label:"Total gagné", val:my.reduce((s,b)=>s+b.price,0)+"€", color:G.teal },
-            { icon:"⭐", label:"Note moyenne", val:"4.9", color:G.amber },
-            { icon:"👶", label:"Enfants gardés", val:my.reduce((s,b)=>s+(b.children||1),0), color:G.purple },
-            { icon:"⏱", label:"Heures de garde", val:my.reduce((s,b)=>s+parseInt(b.duration||0),0)+"h", color:G.coral },
-            { icon:"📹", label:"Gardes avec caméra", val:my.filter(b=>b.camera).length, color:G.teal },
+            { icon:"✅", label:t('missionsCompleted'), val:my.length, color:G.green },
+            { icon:"💰", label:t('totalEarned'), val:my.reduce((s,b)=>s+b.price,0)+"€", color:G.teal },
+            { icon:"⭐", label:t('avgRating'), val:"4.9", color:G.amber },
+            { icon:"👶", label:t('childrenCared'), val:my.reduce((s,b)=>s+(b.children||1),0), color:G.purple },
+            { icon:"⏱", label:t('careHours'), val:my.reduce((s,b)=>s+parseInt(b.duration||0),0)+"h", color:G.coral },
+            { icon:"📹", label:t('careWithCamera'), val:my.filter(b=>b.camera).length, color:G.teal },
           ].map(s => (
             <Card key={s.label} style={{ textAlign:"center" }}>
               <div style={{ fontSize:"2rem", marginBottom:8 }}>{s.icon}</div>
@@ -2157,14 +2161,14 @@ const toggleTwoFA = async () => {
           ))}
 
           <Card style={{ gridColumn:"1 / -1" }}>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Dernières missions</div>
-            {my.length === 0 && <div style={{ color:G.muted, fontSize:"0.85rem" }}>Aucune mission terminée pour le moment.</div>}
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>{t('lastMissions')}</div>
+            {my.length === 0 && <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('noMissionCompleted')}</div>}
             {my.slice(0,5).map(b => (
               <div key={b.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
                 <span style={{ fontSize:"1.5rem" }}>👨‍👧</span>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:600, fontSize:"0.85rem", color:G.text }}>{b.parentName}</div>
-                  <div style={{ color:G.muted, fontSize:"0.75rem" }}>{b.date} · {b.duration} · {b.children} enfant{b.children>1?"s":""}</div>
+                  <div style={{ color:G.muted, fontSize:"0.75rem" }}>{b.date} · {b.duration} · {b.children} {b.children>1?t('childrenLabelPlural'):t('childrenLabel')}</div>
                 </div>
                 <div style={{ textAlign:"right" }}>
                   <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.teal }}>{b.price}€</div>
@@ -2177,10 +2181,10 @@ const toggleTwoFA = async () => {
       )}
     </div>
   );
- };
+};
 
 // ─── CAMERA PAGE ──────────────────────────────────────────────
-const CameraPage = ({ user }) => {
+const CameraPage = ({ user, t = (k) => k }) => {
   const [active, setActive] = useState(false);
   const [stream, setStream] = useState(null);
   const [time, setTime] = useState("--:--:--");
@@ -2195,7 +2199,7 @@ const CameraPage = ({ user }) => {
       setStream(s);
       if (videoRef.current) videoRef.current.srcObject = s;
       setActive(true);
-    } catch(e) { alert("Accès caméra refusé."); }
+    } catch(e) { alert(t('cameraAccessDenied')); }
   };
   const stop = () => {
     if (stream) stream.getTracks().forEach(t=>t.stop());
@@ -2206,15 +2210,15 @@ const CameraPage = ({ user }) => {
     <div style={{ display:"grid", gridTemplateColumns:"1fr 300px", gap:20, alignItems:"start" }}>
       <div>
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>
-          {user.role==="parent" ? "📹 Surveillance en direct" : "📷 Flux caméra mission"}
+          {user.role==="parent" ? t('liveSurveillance') : t('missionStream')}
         </div>
-        <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:16 }}>Flux vidéo chiffré pair-à-pair.</div>
+        <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:16 }}>{t('encryptedStream')}</div>
         <div style={{ background:"#000", borderRadius:16, overflow:"hidden", position:"relative", aspectRatio:"16/9", border:`1px solid ${G.border}`, marginBottom:14 }}>
           <video ref={videoRef} autoPlay muted playsInline style={{ width:"100%", height:"100%", objectFit:"cover", display:active?"block":"none", transform:"scaleX(-1)" }} />
           {!active && (
             <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, color:G.muted }}>
               <div style={{ fontSize:"3rem", opacity:0.25 }}>📷</div>
-              <div style={{ fontSize:"0.88rem" }}>Cliquez sur Démarrer</div>
+              <div style={{ fontSize:"0.88rem" }}>{t('clickToStart')}</div>
             </div>
           )}
           {active && (
@@ -2227,27 +2231,27 @@ const CameraPage = ({ user }) => {
                 <div style={{ color:"rgba(255,255,255,0.8)", fontSize:"0.78rem", fontWeight:600 }}>{time}</div>
               </div>
               <div style={{ position:"absolute", bottom:0, left:0, right:0, padding:"20px 16px 10px", background:"linear-gradient(0deg,rgba(0,0,0,0.7),transparent)", fontSize:"0.72rem", color:"rgba(255,255,255,0.6)" }}>
-                🏠 Domicile client · 🔒 Flux chiffré
+                {t('atClientHome')}
               </div>
             </>
           )}
         </div>
         <div style={{ display:"flex", gap:10 }}>
           {!active
-            ? <Btn onClick={start} variant="teal" size="lg">▶ Démarrer le flux</Btn>
-            : <Btn onClick={stop} variant="coral" size="lg">⏹ Arrêter</Btn>
+            ? <Btn onClick={start} variant="teal" size="lg">{t('startStream')}</Btn>
+            : <Btn onClick={stop} variant="coral" size="lg">{t('stopStream')}</Btn>
           }
-          {active && <Btn onClick={() => { const c=document.createElement("canvas"); const v=videoRef.current; c.width=v.videoWidth||640; c.height=v.videoHeight||360; c.getContext("2d").drawImage(v,0,0); c.toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="bw-"+Date.now()+".png"; a.click(); }); }} variant="ghost" size="lg">📸 Capture</Btn>}
+          {active && <Btn onClick={() => { const c=document.createElement("canvas"); const v=videoRef.current; c.width=v.videoWidth||640; c.height=v.videoHeight||360; c.getContext("2d").drawImage(v,0,0); c.toBlob(b=>{ const a=document.createElement("a"); a.href=URL.createObjectURL(b); a.download="bw-"+Date.now()+".png"; a.click(); }); }} variant="ghost" size="lg">{t('snapshot')}</Btn>}
         </div>
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
         <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>Statut</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>{t('status')}</div>
           {[
-            ["Caméra", active?"Active ●":"Inactive", active?G.green:G.muted],
-            ["Chiffrement", "DTLS/SRTP", G.teal],
-            ["Protocole", "WebRTC P2P", G.teal],
-            ["Stockage", "Aucun", G.green],
+            [t('cameraBadge'), active?t('statusActive'):t('statusInactive'), active?G.green:G.muted],
+            [t('encryption'), "DTLS/SRTP", G.teal],
+            [t('protocol'), "WebRTC P2P", G.teal],
+            [t('storage'), t('none'), G.green],
           ].map(([l,v,c]) => (
             <div key={l} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:`1px solid ${G.border}`, fontSize:"0.8rem" }}>
               <span style={{ color:G.muted }}>{l}</span>
@@ -2256,8 +2260,8 @@ const CameraPage = ({ user }) => {
           ))}
         </Card>
         <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:10 }}>🔒 Confidentialité</div>
-          <div style={{ color:G.muted, fontSize:"0.78rem", lineHeight:1.7 }}>Flux pair-à-pair uniquement. <strong style={{ color:G.text }}>Aucune vidéo ne passe par nos serveurs.</strong></div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:10 }}>{t('privacy')}</div>
+          <div style={{ color:G.muted, fontSize:"0.78rem", lineHeight:1.7 }}>{t('p2pOnly')} <strong style={{ color:G.text }}>{t('noServerVideo')}</strong></div>
         </Card>
       </div>
     </div>
@@ -2265,7 +2269,7 @@ const CameraPage = ({ user }) => {
 };
 
 // ─── MAP VIEW ─────────────────────────────────────────────────
-const MapView = ({ user, showToast }) => {
+const MapView = ({ user, showToast, t = (k) => k }) => {
   const [sitters, setSitters] = useState([]);
   const [selected, setSelected] = useState(null);
   const [userLat, setUserLat] = useState(48.8566);
@@ -2328,11 +2332,11 @@ const MapView = ({ user, showToast }) => {
   return (
     <div>
       <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>🗺️ Babysitters près de chez vous</div>
-      <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:16 }}>Trouvez les babysitters disponibles dans votre quartier</div>
+      <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:16 }}>{t('nearbySubtitle')}</div>
       <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
         <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un babysitter…" style={{ flex:1, minWidth:200, background:G.card, border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }} />
         <div style={{ display:"flex", alignItems:"center", gap:8, background:G.card, border:`1px solid ${G.border}`, borderRadius:10, padding:"0 14px" }}>
-          <span style={{ color:G.muted, fontSize:"0.78rem" }}>Rayon :</span>
+          <span style={{ color:G.muted, fontSize:"0.78rem" }}>{t('radius')}</span>
           <select value={maxDist} onChange={e=>setMaxDist(parseInt(e.target.value))} style={{ background:"transparent", border:"none", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", padding:"10px 4px" }}>
             {[2,5,10,20,50].map(d => <option key={d} value={d}>{d} km</option>)}
           </select>
@@ -2354,11 +2358,11 @@ const MapView = ({ user, showToast }) => {
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
                 <div style={{ background:G.night, borderRadius:8, padding:"8px 12px", textAlign:"center" }}>
                   <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.teal }}>{selected.hourly_rate}€/h</div>
-                  <div style={{ fontSize:"0.65rem", color:G.muted }}>Tarif</div>
+                  <div style={{ fontSize:"0.65rem", color:G.muted }}>{t('price')}</div>
                 </div>
                 <div style={{ background:G.night, borderRadius:8, padding:"8px 12px", textAlign:"center" }}>
                   <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.amber }}>⭐ {selected.rating||"—"}</div>
-                  <div style={{ fontSize:"0.65rem", color:G.muted }}>Note</div>
+                  <div style={{ fontSize:"0.65rem", color:G.muted }}>{t('rating')}</div>
                 </div>
               </div>
               {selected.bio && <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:12, lineHeight:1.5 }}>{selected.bio}</div>}
@@ -2371,7 +2375,7 @@ const MapView = ({ user, showToast }) => {
           {filteredSitters.length===0 && !loading && (
             <Card style={{ textAlign:"center", padding:20 }}>
               <div style={{ fontSize:"2rem", marginBottom:8 }}>😔</div>
-              <div style={{ color:G.muted, fontSize:"0.85rem" }}>Aucun babysitter dans ce rayon.</div>
+              <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('noSitterRadius')}</div>
               <button onClick={()=>setMaxDist(50)} style={{ marginTop:10, background:"none", border:"none", color:G.teal, cursor:"pointer", fontSize:"0.82rem", fontWeight:600 }}>Élargir à 50 km →</button>
             </Card>
           )}
@@ -2645,22 +2649,15 @@ const AdminDashboard = ({ user, onLogout }) => {
 };
 
 // ─── PAYMENT MODAL ────────────────────────────────────────────
-const PaymentModal = ({ booking, onClose, onSuccess, showToast }) => {
+const PaymentModal = ({ booking, onClose, onSuccess, showToast, t = (k) => k }) => {
   const [loading, setLoading] = useState(false);
   const [paid, setPaid] = useState(false);
-  const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
   const [error, setError] = useState("");
 
-  const formatCard = (val) => val.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim().slice(0,19);
-  const formatExpiry = (val) => val.replace(/\D/g,'').replace(/^(\d{2})(\d)/,'$1/$2').slice(0,5);
-
+  // NOTE: la saisie de carte a ete retiree volontairement.
+  // Collecter un numero de carte dans un <input> classique viole la norme PCI-DSS.
+  // L'integration reelle doit passer par Stripe Elements (voir StripePayment.jsx).
   const handlePayment = async () => {
-    if (!cardName || cardNumber.replace(/\s/g,'').length < 16 || expiry.length < 5 || cvv.length < 3) {
-      setError("Veuillez remplir tous les champs correctement."); return;
-    }
     setLoading(true); setError("");
     try {
       const token = localStorage.getItem('token');
@@ -2670,28 +2667,20 @@ const PaymentModal = ({ booking, onClose, onSuccess, showToast }) => {
         body: JSON.stringify({ amount: booking.price, bookingId: booking.id, sitterName: booking.sitterName })
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error); setLoading(false); return; }
-      // Simuler confirmation (en production utiliser Stripe Elements)
-      setTimeout(async () => {
-        const confirmRes = await fetch(`${API}/payments/confirm`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ paymentIntentId: data.clientSecret.split('_secret')[0], bookingId: booking.id })
-        });
-        if (confirmRes.ok) { setPaid(true); setLoading(false); }
-        else { setError("Erreur de confirmation."); setLoading(false); }
-      }, 2000);
-    } catch(e) { setError("Erreur de connexion."); setLoading(false); }
+      if (!res.ok) { setError(data.error || t('connectionError')); setLoading(false); return; }
+      setPaid(true);
+      setLoading(false);
+    } catch(e) { setError(t('connectionError')); setLoading(false); }
   };
 
   if (paid) return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <Card style={{ maxWidth:420, width:"100%", textAlign:"center", padding:40 }}>
-        <div style={{ fontSize:"3.5rem", marginBottom:16 }}>🎉</div>
-        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:12 }}>Paiement réussi !</div>
-        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:8 }}>Votre réservation est confirmée.</div>
-        <div style={{ color:G.teal, fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", marginBottom:24 }}>{booking.price}€ payés</div>
-        <Btn onClick={() => { onSuccess(); onClose(); }} variant="teal" size="lg" full>Voir ma réservation →</Btn>
+        <div style={{ fontSize:"3.5rem", marginBottom:16 }}>✅</div>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:12 }}>{t('bookingRegistered')}</div>
+        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:16 }}>{t('paymentPendingNote')}</div>
+        <div style={{ color:G.teal, fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", marginBottom:24 }}>{booking.price}€</div>
+        <Btn onClick={() => { onSuccess(); onClose(); }} variant="teal" size="lg" full>{t('viewBooking')}</Btn>
       </Card>
     </div>
   );
@@ -2699,87 +2688,43 @@ const PaymentModal = ({ booking, onClose, onSuccess, showToast }) => {
   return (
     <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.8)", backdropFilter:"blur(4px)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
       <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:480, overflow:"hidden", boxShadow:"0 24px 80px #0008" }}>
-
-        {/* Header */}
         <div style={{ background:G.night, padding:"24px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.2rem", color:"#fff" }}>💳 Paiement sécurisé</div>
-            <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:4 }}>Garde avec {booking.sitterName} · {booking.date}</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.2rem", color:"#fff" }}>{t('confirmBooking')}</div>
+            <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:4 }}>{booking.sitterName} · {booking.date}</div>
           </div>
           <button onClick={onClose} style={{ background:"rgba(255,255,255,0.1)", border:"none", color:G.muted, width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:"1.1rem" }}>✕</button>
         </div>
 
         <div style={{ padding:"28px" }}>
-
-          {/* Récapitulatif */}
           <div style={{ background:G.card, borderRadius:12, padding:16, marginBottom:20, border:`1px solid ${G.border}` }}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-              <span style={{ color:G.muted, fontSize:"0.85rem" }}>Garde {booking.duration} · {booking.children} enfant{booking.children>1?"s":""}</span>
+              <span style={{ color:G.muted, fontSize:"0.85rem" }}>{booking.duration} · {booking.children} {booking.children>1?t('childrenLabelPlural'):t('childrenLabel')}</span>
               <span style={{ color:G.text, fontWeight:600 }}>{booking.price}€</span>
             </div>
             {booking.camera && (
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
-                <span style={{ color:G.muted, fontSize:"0.85rem" }}>📹 Surveillance caméra</span>
-                <span style={{ color:G.teal, fontWeight:600 }}>Inclus</span>
+                <span style={{ color:G.muted, fontSize:"0.85rem" }}>{t('cameraOption')}</span>
+                <span style={{ color:G.teal, fontWeight:600 }}>{t('included')}</span>
               </div>
             )}
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", borderTop:`1px solid ${G.border}`, paddingTop:10, marginTop:8 }}>
-              <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>Total</span>
+              <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{t('total')}</span>
               <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, color:G.teal, fontSize:"1.3rem" }}>{booking.price}€</span>
             </div>
           </div>
 
-          {/* Formulaire carte */}
-          <Input label="Nom sur la carte" value={cardName} onChange={setCardName} placeholder="SOPHIE DUPONT" icon="👤" />
-
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Numéro de carte</label>
-            <div style={{ position:"relative" }}>
-              <input
-                value={cardNumber}
-                onChange={e => setCardNumber(formatCard(e.target.value))}
-                placeholder="1234 5678 9012 3456"
-                maxLength={19}
-                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px 10px 44px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none", letterSpacing:"0.05em" }}
-              />
-              <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:"1.2rem" }}>💳</span>
-            </div>
-          </div>
-
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-            <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>Date d'expiration</label>
-              <input
-                value={expiry}
-                onChange={e => setExpiry(formatExpiry(e.target.value))}
-                placeholder="MM/AA"
-                maxLength={5}
-                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}
-              />
-            </div>
-            <div style={{ marginBottom:16 }}>
-              <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>CVV</label>
-              <input
-                value={cvv}
-                onChange={e => setCvv(e.target.value.replace(/\D/g,'').slice(0,3))}
-                placeholder="123"
-                maxLength={3}
-                type="password"
-                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}
-              />
-            </div>
-          </div>
-
-          <div style={{ display:"flex", alignItems:"center", gap:8, background:"rgba(45,212,191,0.06)", border:`1px solid ${G.teal}33`, borderRadius:10, padding:"10px 14px", marginBottom:20, fontSize:"0.78rem", color:G.muted }}>
-            🔒 Paiement sécurisé via <strong style={{ color:G.teal, marginLeft:4 }}>Stripe</strong> · Données chiffrées SSL 256-bit
+          <div style={{ background:"rgba(251,191,36,0.08)", border:`1px solid ${G.amber}44`, borderRadius:10, padding:"14px 16px", marginBottom:20 }}>
+            <div style={{ color:G.amber, fontWeight:700, fontSize:"0.85rem", marginBottom:6 }}>{t('demoModeTitle')}</div>
+            <div style={{ color:G.muted, fontSize:"0.78rem", lineHeight:1.6 }}>{t('demoModeNote')}</div>
           </div>
 
           {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
 
           <div style={{ display:"flex", gap:10 }}>
-            <Btn onClick={onClose} variant="ghost" full>Annuler</Btn>
+            <Btn onClick={onClose} variant="ghost" full>{t('cancel')}</Btn>
             <Btn onClick={handlePayment} variant="teal" full disabled={loading}>
-              {loading ? "Traitement en cours…" : `💳 Payer ${booking.price}€`}
+              {loading ? t('processing') : t('confirmBookingBtn')}
             </Btn>
           </div>
         </div>
@@ -2789,7 +2734,7 @@ const PaymentModal = ({ booking, onClose, onSuccess, showToast }) => {
 };
 
 // ─── CHAT MODAL ───────────────────────────────────────────────
-const ChatModal = ({ booking, user, onClose }) => {
+const ChatModal = ({ booking, user, onClose, t = (k) => k }) => {
   const [messages, setMessages] = useState([]);
   const [newMsg, setNewMsg] = useState("");
   const [loading, setLoading] = useState(true);
@@ -2865,11 +2810,11 @@ const ChatModal = ({ booking, user, onClose }) => {
 
         {/* Messages */}
         <div style={{ flex:1, overflowY:"auto", padding:"16px 20px", display:"flex", flexDirection:"column", gap:8 }}>
-          {loading && <div style={{ textAlign:"center", color:G.muted, padding:20 }}>Chargement…</div>}
+          {loading && <div style={{ textAlign:"center", color:G.muted, padding:20 }}>{t('loading')}</div>}
           {!loading && messages.length===0 && (
             <div style={{ textAlign:"center", color:G.muted, padding:40 }}>
               <div style={{ fontSize:"2.5rem", marginBottom:12 }}>💬</div>
-              <div style={{ fontSize:"0.88rem" }}>Démarrez la conversation !</div>
+              <div style={{ fontSize:"0.88rem" }}>{t('startConversation')}</div>
             </div>
           )}
           {messages.map(msg => (
@@ -2917,8 +2862,9 @@ const ChatModal = ({ booking, user, onClose }) => {
 // ─── MAIN APP ─────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(null);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const [page, setPage] = useState("home");
-  const [bookings, setBookings] = useState(BOOKINGS_INIT);
+  const [bookings, setBookings] = useState([]);
   const [toast, showToast] = useToast();
   const [lang, setLang] = useState(localStorage.getItem('lang') || 'fr');
 
@@ -2953,8 +2899,61 @@ export default function App() {
     if (user) initPush();
   }, [user]);
 
-  const handleLogin  = (u) => { setUser(u); setPage("home"); window.history.pushState({}, "", "/"); };
-  const handleLogout = ()  => { setUser(null); setPage("home"); localStorage.removeItem('token'); };
+  // Restaure la session au chargement (évite la déconnexion à chaque F5)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const savedUser = localStorage.getItem('user');
+    if (token && savedUser) {
+      try { setUser(JSON.parse(savedUser)); }
+      catch(e) { localStorage.removeItem('user'); }
+    }
+    setSessionChecked(true);
+  }, []);
+
+  // Charge les vraies réservations depuis l'API
+  useEffect(() => {
+    if (!user) { setBookings([]); return; }
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/bookings`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        setBookings(data.map(b => ({
+          id: b.id,
+          parentId: b.parent_id,
+          sitterId: b.sitter_id,
+          parentName: b.parent_name || "",
+          sitterName: b.sitter_name || "",
+          sitterAvatar: "👩",
+          date: b.date ? String(b.date).slice(0,10) : "",
+          time: b.time_start ? String(b.time_start).slice(0,5) : "",
+          duration: b.duration ? `${b.duration}h` : "",
+          address: b.address || "",
+          children: b.children || 1,
+          notes: b.notes || "",
+          camera: !!b.camera,
+          status: b.status || "pending",
+          price: b.price ? parseFloat(b.price) : 0,
+          rating: b.rating || null,
+          review: b.review || "",
+        })));
+      })
+      .catch(console.error);
+  }, [user]);
+
+  const handleLogin  = (u) => {
+    setUser(u);
+    try { localStorage.setItem('user', JSON.stringify(u)); } catch(e) {}
+    setPage("home");
+    window.history.pushState({}, "", "/");
+  };
+  const handleLogout = ()  => {
+    setUser(null);
+    setPage("home");
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  };
 
   const isConfirmPage = window.location.pathname === "/confirm" || (window.location.search.includes("token=") && !window.location.pathname.includes("reset"));
   const isResetPage   = window.location.pathname === "/reset-password" || (window.location.search.includes("token=") && window.location.pathname.includes("reset"));
@@ -2962,14 +2961,14 @@ export default function App() {
   if (isConfirmPage) return (
     <>
       <style>{`@keyframes bw-blink{50%{opacity:0}} *{box-sizing:border-box} body{background:#0f1923}`}</style>
-      <ConfirmPage onLogin={handleLogin} />
+      <ConfirmPage onLogin={handleLogin} t={t} />
     </>
   );
 
   if (isResetPage) return (
     <>
       <style>{`*{box-sizing:border-box} body{background:#0f1923}`}</style>
-      <ResetPasswordPage onBack={() => window.location.href = "/"} />
+      <ResetPasswordPage onBack={() => window.location.href = "/"} t={t} />
     </>
   );
 
@@ -2981,6 +2980,13 @@ export default function App() {
   const declineMission = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Mission refusée.", "err"); };
   const addReview      = (id, rating, review) => { setBookings(prev => prev.map(b => b.id===id?{...b,rating,review}:b)); showToast("⭐ Avis publié avec succès !", "ok"); };
 
+  // Évite le clignotement de l'écran de connexion pendant la vérification
+  if (!sessionChecked) return (
+    <div style={{ minHeight:"100vh", background:G.night, display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ fontSize:"2.5rem" }}>🍼</div>
+    </div>
+  );
+
   if (!user) return (
     <>
       <style>{`
@@ -2990,7 +2996,7 @@ export default function App() {
         ::-webkit-scrollbar{width:5px}
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px}
       `}</style>
-      <AuthPage onLogin={handleLogin} />
+      <AuthPage onLogin={handleLogin} t={t} />
       <Toast toast={toast} />
     </>
   );
@@ -3026,7 +3032,9 @@ if (page==="children") return <ChildrenManager showToast={showToast} t={t}/>;
       <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout} lang={lang} onLangChange={changeLang}/>
       <main style={{ paddingTop:64, minHeight:"100vh" }}>
         <div style={{ maxWidth:1100, margin:"0 auto", padding:"32px 24px" }}>
-          {renderPage()}
+          <ErrorBoundary>
+            {renderPage()}
+          </ErrorBoundary>
         </div>
       </main>
       <Toast toast={toast}/>
