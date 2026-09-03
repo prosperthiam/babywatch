@@ -81,7 +81,30 @@ router.post('/', auth, async (req, res) => {
 // PATCH modifier le statut
 router.patch('/:id/status', auth, async (req, res) => {
   const { status } = req.body;
+  const ALLOWED = ['pending','confirmed','cancelled','completed'];
+  if (!ALLOWED.includes(status)) {
+    return res.status(400).json({ error: 'Statut invalide.' });
+  }
   try {
+    // Verifier que l'utilisateur est bien partie prenante de cette reservation
+    const check = await pool.query(
+      'SELECT parent_id, sitter_id FROM bookings WHERE id = $1',
+      [req.params.id]
+    );
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Reservation introuvable.' });
+    }
+    const { parent_id, sitter_id } = check.rows[0];
+    const isParent = String(parent_id) === String(req.userId);
+    const isSitter = String(sitter_id) === String(req.userId);
+    if (!isParent && !isSitter) {
+      return res.status(403).json({ error: 'Acces refuse.' });
+    }
+    // Seule la babysitter peut confirmer une garde
+    if (status === 'confirmed' && !isSitter) {
+      return res.status(403).json({ error: 'Seule la babysitter peut confirmer.' });
+    }
+
     const result = await pool.query(
       'UPDATE bookings SET status = $1 WHERE id = $2 RETURNING *',
       [status, req.params.id]

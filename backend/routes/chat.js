@@ -15,6 +15,18 @@ const auth = (req, res, next) => {
 };
 
 // GET messages d'une réservation
+router.get('/unread/count', auth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT COUNT(*) as count FROM chat_messages WHERE receiver_id = $1 AND read = false',
+      [req.userId]
+    );
+    res.json({ count: parseInt(result.rows[0].count) });
+  } catch(e) {
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
 router.get('/:bookingId', auth, async (req, res) => {
   try {
     const result = await pool.query(
@@ -75,16 +87,6 @@ router.post('/:bookingId', auth, async (req, res) => {
 });
 
 // GET nombre de messages non lus
-router.get('/unread/count', auth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT COUNT(*) as count FROM chat_messages WHERE receiver_id = $1 AND read = false',
-      [req.userId]
-    );
-    res.json({ count: parseInt(result.rows[0].count) });
-  } catch(e) {
-    res.status(500).json({ error: 'Erreur serveur.' });
-  }
-});
+
 
 module.exports = router;

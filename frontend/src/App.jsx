@@ -1719,7 +1719,6 @@ const ParentBookings = ({ user, bookings, onCancel, onNav, onReview, t = (k) => 
 
               <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                 {(b.status==="confirmed"||b.status==="pending") && <Btn onClick={() => setChatBooking(b)} variant="ghost" size="sm">{t('chat')}</Btn>}
-                {b.status==="confirmed" && <Btn onClick={() => setHouseBooking(b)} variant="ghost" size="sm">{t('houseInfoBtn')}</Btn>}
                 {b.camera && b.status==="confirmed" && <Btn onClick={() => onNav("camera")} variant="teal" size="sm">📹 Live</Btn>}
                 {b.status==="pending" && <Btn onClick={() => onCancel(b.id)} variant="danger" size="sm">{t('cancel')}</Btn>}
                 {b.status==="completed" && !b.rating && (
@@ -1949,6 +1948,7 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) =
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                 {(b.status==="confirmed"||b.status==="pending") && <Btn onClick={() => setChatBooking(b)} variant="ghost" size="sm">{t('chat')}</Btn>}
+                {b.status==="confirmed" && <Btn onClick={() => setHouseBooking(b)} variant="ghost" size="sm">{t('houseInfoBtn')}</Btn>}
                 {b.status==="pending" && (
                   <>
                     <Btn onClick={() => onAccept(b.id)} variant="teal" size="sm">{t('accept')}</Btn>
@@ -2777,7 +2777,7 @@ const MapView = ({ user, showToast, t = (k) => k }) => {
             <Card style={{ textAlign:"center", padding:20 }}>
               <div style={{ fontSize:"2rem", marginBottom:8 }}>😔</div>
               <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('noSitterRadius')}</div>
-              <button onClick={()=>setMaxDist(50)} style={{ marginTop:10, background:"none", border:"none", color:G.teal, cursor:"pointer", fontSize:"0.82rem", fontWeight:600 }}>Élargir à 50 km →</button>
+              <button onClick={()=>setMaxDist(50)} style={{ marginTop:10, background:"none", border:"none", color:G.teal, cursor:"pointer", fontSize:"0.82rem", fontWeight:600 }}>{t('expandRadius')}</button>
             </Card>
           )}
           <div style={{ display:"flex", flexDirection:"column", gap:8, maxHeight:340, overflowY:"auto" }}>
@@ -3419,11 +3419,65 @@ export default function App() {
 
   if (user?.role === "admin") return <AdminDashboard user={user} onLogout={handleLogout} />;
 
-  const addBooking     = (b)  => setBookings(prev => [{ ...b, parentId:user.id, parentName:user.name }, ...prev]);
-  const cancelBooking  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Réservation annulée.", "err"); };
-  const acceptMission  = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"confirmed"} : b)); showToast("✅ Mission acceptée !", "ok"); };
-  const declineMission = (id) => { setBookings(prev => prev.map(b => b.id===id ? {...b,status:"cancelled"} : b)); showToast("Mission refusée.", "err"); };
-  const addReview      = (id, rating, review) => { setBookings(prev => prev.map(b => b.id===id?{...b,rating,review}:b)); showToast("⭐ Avis publié avec succès !", "ok"); };
+  const authHeaders = () => ({
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${localStorage.getItem('token')}`
+  });
+
+  // Crée la réservation en base, puis l'affiche
+  const addBooking = async (b) => {
+    try {
+      const res = await fetch(`${API}/bookings`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({
+          sitterId: b.sitterId,
+          date: b.date,
+          timeStart: b.time,
+          duration: parseInt(b.duration),
+          address: b.address,
+          children: b.children,
+          notes: b.notes,
+          camera: b.camera,
+          price: b.price,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast("❌ " + (data.error || t('connectionError')), "err"); return; }
+      setBookings(prev => [{
+        ...b,
+        id: data.id,
+        parentId: user.id,
+        parentName: user.name,
+        status: data.status || "pending",
+      }, ...prev]);
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
+  };
+
+  // Change le statut en base, puis localement
+  const updateStatus = async (id, status, msg, type) => {
+    try {
+      const res = await fetch(`${API}/bookings/${id}/status`, {
+        method: 'PATCH',
+        headers: authHeaders(),
+        body: JSON.stringify({ status })
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast("❌ " + (data.error || t('connectionError')), "err"); return; }
+      setBookings(prev => prev.map(b => b.id===id ? {...b, status} : b));
+      showToast(msg, type);
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
+  };
+
+  const cancelBooking  = (id) => updateStatus(id, "cancelled", t('bookingCancelled'), "err");
+  const acceptMission  = (id) => updateStatus(id, "confirmed", t('missionAccepted'), "ok");
+  const declineMission = (id) => updateStatus(id, "cancelled", t('missionDeclined'), "err");
+
+  // L'avis est déjà envoyé par ReviewModal : on ne fait que rafraîchir l'affichage
+  const addReview = (id, rating, review) => {
+    setBookings(prev => prev.map(b => b.id===id ? {...b, rating, review} : b));
+    showToast(t('reviewPublished'), "ok");
+  };
 
   // Évite le clignotement de l'écran de connexion pendant la vérification
   if (!sessionChecked) return (

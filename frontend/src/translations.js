@@ -440,6 +440,16 @@ secureConnection: "Connexion sécurisée · RGPD",
   },
 
   en: {
+    bookingCancelled: "Booking cancelled.",
+missionAccepted: "✅ Mission accepted!",
+missionDeclined: "Mission declined.",
+reviewPublished: "⭐ Review published!",
+
+    bookingCancelled: "Réservation annulée.",
+missionAccepted: "✅ Mission acceptée !",
+missionDeclined: "Mission refusée.",
+reviewPublished: "⭐ Avis publié avec succès !",
+
     otherRoleTitle: "Also looking to babysit?",
 otherRoleDesc: "Activate your babysitter space on this same account. You can switch between both spaces at any time, without signing in again.",
 otherRoleCta: "Activate my second space",
@@ -882,6 +892,11 @@ secureConnection: "Secure connection · GDPR",
   },
 
   ar: {
+    bookingCancelled: "تم إلغاء الحجز.",
+missionAccepted: "✅ تم قبول المهمة!",
+missionDeclined: "تم رفض المهمة.",
+reviewPublished: "⭐ تم نشر التقييم!",
+
     otherRoleTitle: "هل ترغب أيضاً في رعاية الأطفال؟",
 otherRoleDesc: "فعّل مساحة المربية على نفس الحساب. يمكنك التبديل بين المساحتين في أي وقت، دون تسجيل دخول جديد.",
 otherRoleCta: "تفعيل مساحتي الثانية",
