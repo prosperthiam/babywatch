@@ -1092,6 +1092,10 @@ const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole })
   const [birthDate, setBirthDate] = useState("");
   const [birthPlace, setBirthPlace] = useState("");
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
+  const [wifiSsid, setWifiSsid] = useState("");
+  const [wifiPassword, setWifiPassword] = useState("");
+  const [wifiNotes, setWifiNotes] = useState("");
+  const [showWifiPw, setShowWifiPw] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -1109,6 +1113,9 @@ const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole })
         if (data.birth_date)  setBirthDate(data.birth_date?.slice(0,10) || "");
         if (data.birth_place) setBirthPlace(data.birth_place || "");
         if (data.two_factor_enabled !== undefined) setTwoFAEnabled(data.two_factor_enabled);
+        if (data.wifi_ssid) setWifiSsid(data.wifi_ssid || "");
+        if (data.wifi_password) setWifiPassword(data.wifi_password || "");
+        if (data.wifi_notes) setWifiNotes(data.wifi_notes || "");
       })
       .catch(console.error);
   }, []);
@@ -1120,7 +1127,7 @@ const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole })
       const res = await fetch(`${API}/profile/parent`, {
         method:'PUT',
         headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
-        body: JSON.stringify({ firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace })
+        body: JSON.stringify({ firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, wifiSsid, wifiPassword, wifiNotes })
       });
       const data = await res.json();
       if (res.ok) showToast("✅ " + t('profileUpdated'), "ok");
@@ -1211,6 +1218,39 @@ const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole })
           <div style={{ width:44, height:24, background: twoFAEnabled?G.teal:"rgba(255,255,255,0.15)", borderRadius:12, position:"relative", flexShrink:0, transition:"background 0.25s" }}>
             <div style={{ position:"absolute", top:3, left: twoFAEnabled?23:3, width:18, height:18, background:"#fff", borderRadius:"50%", transition:"left 0.25s" }} />
           </div>
+        </div>
+      </Card>
+
+      <Card style={{ marginTop:16, borderColor:G.teal+"33" }}>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>{t('wifiTitle')}</div>
+        <div style={{ color:G.muted, fontSize:"0.85rem", lineHeight:1.65, marginBottom:18 }}>{t('wifiDesc')}</div>
+
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+          <Input label={t('wifiSsid')} value={wifiSsid} onChange={setWifiSsid} placeholder="Livebox-A1B2" icon="📶" />
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('wifiPassword')}</label>
+            <div style={{ position:"relative" }}>
+              <span style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", fontSize:"1rem" }}>🔑</span>
+              <input
+                type={showWifiPw ? "text" : "password"}
+                value={wifiPassword}
+                onChange={e => setWifiPassword(e.target.value)}
+                placeholder="••••••••"
+                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 46px 10px 38px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}
+              />
+              <button type="button" onClick={() => setShowWifiPw(v => !v)}
+                aria-label={showWifiPw ? t('wifiHide') : t('wifiShow')}
+                style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", fontSize:"1rem", padding:4 }}>
+                {showWifiPw ? "🙈" : "👁"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <Input label={t('wifiNotes')} value={wifiNotes} onChange={setWifiNotes} placeholder={t('wifiNotesPlaceholder')} icon="📝" />
+
+        <div style={{ background:G.teal+"11", border:`1px solid ${G.teal}33`, borderRadius:10, padding:14 }}>
+          <div style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.7 }}>{t('wifiPrivacy')}</div>
         </div>
       </Card>
 
@@ -1679,6 +1719,7 @@ const ParentBookings = ({ user, bookings, onCancel, onNav, onReview, t = (k) => 
 
               <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
                 {(b.status==="confirmed"||b.status==="pending") && <Btn onClick={() => setChatBooking(b)} variant="ghost" size="sm">{t('chat')}</Btn>}
+                {b.status==="confirmed" && <Btn onClick={() => setHouseBooking(b)} variant="ghost" size="sm">{t('houseInfoBtn')}</Btn>}
                 {b.camera && b.status==="confirmed" && <Btn onClick={() => onNav("camera")} variant="teal" size="sm">📹 Live</Btn>}
                 {b.status==="pending" && <Btn onClick={() => onCancel(b.id)} variant="danger" size="sm">{t('cancel')}</Btn>}
                 {b.status==="completed" && !b.rating && (
@@ -1748,10 +1789,115 @@ const SitterHome = ({ user, bookings, onNav, t = (k) => k }) => {
     </div>
   );
 };
+// ─── INFOS MAISON (visible par la babysitter en mission) ──────
+const HouseInfoModal = ({ booking, onClose, t = (k) => k }) => {
+  const [info, setInfo] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [copied, setCopied] = useState("");
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    fetch(`${API}/profile/house/${booking.id}`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json().then(d => ({ ok:r.ok, d })))
+      .then(({ ok, d }) => { if (ok) setInfo(d); else setError(d.error || t('connectionError')); setLoading(false); })
+      .catch(() => { setError(t('connectionError')); setLoading(false); });
+  }, [booking.id]);
+
+  const copy = (val, label) => {
+    navigator.clipboard?.writeText(val).then(() => {
+      setCopied(label);
+      setTimeout(() => setCopied(""), 1800);
+    }).catch(() => {});
+  };
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.75)", backdropFilter:"blur(4px)", zIndex:300, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+      <div style={{ background:G.panel, borderRadius:20, border:`1px solid ${G.border}`, width:"100%", maxWidth:440, overflow:"hidden", boxShadow:"0 24px 80px #0008" }}>
+        <div style={{ background:G.night, padding:"20px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.1rem", color:"#fff" }}>{t('houseInfoTitle')}</div>
+            <div style={{ color:G.muted, fontSize:"0.8rem", marginTop:3 }}>{booking.parentName} · {booking.date}</div>
+          </div>
+          <button onClick={onClose} style={{ background:"rgba(255,255,255,0.1)", border:"none", color:G.muted, width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:"1.1rem" }}>✕</button>
+        </div>
+
+        <div style={{ padding:"22px 24px" }}>
+          {loading && <div style={{ color:G.muted, textAlign:"center", padding:20 }}>{t('loading')}</div>}
+
+          {error && (
+            <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"12px 14px", color:"#f87171", fontSize:"0.83rem" }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {info && !loading && (
+            <>
+              <div style={{ marginBottom:16 }}>
+                <div style={{ color:G.muted, fontSize:"0.75rem", marginBottom:5 }}>📍 {t('address')}</div>
+                <div style={{ color:G.text, fontSize:"0.9rem" }}>{info.address || "—"}</div>
+              </div>
+
+              {info.wifi_ssid ? (
+                <div style={{ background:G.card, border:`1px solid ${G.border}`, borderRadius:12, padding:"16px 18px", marginBottom:14 }}>
+                  <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:G.teal, fontSize:"0.9rem", marginBottom:14 }}>{t('wifiTitle')}</div>
+
+                  <div style={{ marginBottom:12 }}>
+                    <div style={{ color:G.muted, fontSize:"0.72rem", marginBottom:4 }}>{t('wifiSsid')}</div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <code style={{ flex:1, color:G.text, fontSize:"0.92rem", fontFamily:"monospace", background:G.night, padding:"9px 12px", borderRadius:8, wordBreak:"break-all" }}>{info.wifi_ssid}</code>
+                      <button onClick={() => copy(info.wifi_ssid, 'ssid')} style={{ background:"rgba(255,255,255,0.06)", border:`1px solid ${G.border}`, color:G.muted, borderRadius:8, padding:"8px 11px", cursor:"pointer", fontSize:"0.78rem" }}>
+                        {copied==='ssid' ? "✓" : "📋"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {info.wifi_password && (
+                    <div style={{ marginBottom: info.wifi_notes ? 12 : 0 }}>
+                      <div style={{ color:G.muted, fontSize:"0.72rem", marginBottom:4 }}>{t('wifiPassword')}</div>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <code style={{ flex:1, color:G.text, fontSize:"0.92rem", fontFamily:"monospace", background:G.night, padding:"9px 12px", borderRadius:8, letterSpacing: showPw ? "normal" : "0.15em", wordBreak:"break-all" }}>
+                          {showPw ? info.wifi_password : "•".repeat(Math.min(info.wifi_password.length, 14))}
+                        </code>
+                        <button onClick={() => setShowPw(v=>!v)} style={{ background:"rgba(255,255,255,0.06)", border:`1px solid ${G.border}`, color:G.muted, borderRadius:8, padding:"8px 11px", cursor:"pointer", fontSize:"0.78rem" }}>
+                          {showPw ? "🙈" : "👁"}
+                        </button>
+                        <button onClick={() => copy(info.wifi_password, 'pw')} style={{ background:"rgba(255,255,255,0.06)", border:`1px solid ${G.border}`, color:G.muted, borderRadius:8, padding:"8px 11px", cursor:"pointer", fontSize:"0.78rem" }}>
+                          {copied==='pw' ? "✓" : "📋"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {info.wifi_notes && (
+                    <div style={{ color:G.muted, fontSize:"0.8rem", lineHeight:1.6, borderTop:`1px solid ${G.border}`, paddingTop:10 }}>
+                      📝 {info.wifi_notes}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ background:G.card, border:`1px dashed ${G.border}`, borderRadius:12, padding:"18px", textAlign:"center", color:G.muted, fontSize:"0.83rem" }}>
+                  {t('noWifiShared')}
+                </div>
+              )}
+
+              <div style={{ background:"rgba(251,191,36,0.08)", border:`1px solid ${G.amber}33`, borderRadius:10, padding:12, fontSize:"0.75rem", color:G.muted, lineHeight:1.6 }}>
+                🔒 {t('wifiSitterNotice')}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── SITTER MISSIONS ──────────────────────────────────────────
 const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) => {
   const [filter, setFilter] = useState("all");
   const [chatBooking, setChatBooking] = useState(null);
+  const [houseBooking, setHouseBooking] = useState(null);
   const my = bookings.filter(b => b.sitterId === user.id);
   const tabs = ["all","toConfirm","confirmed","completed"];
   const filtered = filter==="all" ? my : filter==="toConfirm" ? my.filter(b=>b.status==="pending") : my.filter(b=>b.status===filter);
@@ -1763,6 +1909,13 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) =
           booking={chatBooking}
           user={user}
           onClose={() => setChatBooking(null)}
+          t={t}
+        />
+      )}
+      {houseBooking && (
+        <HouseInfoModal
+          booking={houseBooking}
+          onClose={() => setHouseBooking(null)}
           t={t}
         />
       )}

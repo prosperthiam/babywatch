@@ -140,7 +140,8 @@ router.get('/parent', auth, async (req, res) => {
     const result = await pool.query(
       `SELECT first_name, last_name, email, phone, address,
               postal_code, city, country, birth_date, birth_place,
-              latitude, longitude, two_factor_enabled
+              latitude, longitude, two_factor_enabled,
+              wifi_ssid, wifi_password, wifi_notes
        FROM users WHERE id = $1`,
       [req.userId]
     );
@@ -153,15 +154,16 @@ router.get('/parent', auth, async (req, res) => {
 
 // PUT mettre à jour profil parent
 router.put('/parent', auth, async (req, res) => {
-  const { firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, latitude, longitude } = req.body;
+  const { firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, latitude, longitude, wifiSsid, wifiPassword, wifiNotes } = req.body;
   try {
     await pool.query(
       `UPDATE users SET 
         first_name=$1, last_name=$2, phone=$3, address=$4,
         postal_code=$5, city=$6, country=$7, birth_date=$8,
-        birth_place=$9, latitude=$10, longitude=$11
-       WHERE id=$12`,
-      [firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, latitude, longitude, req.userId]
+        birth_place=$9, latitude=$10, longitude=$11,
+        wifi_ssid=$12, wifi_password=$13, wifi_notes=$14
+       WHERE id=$15`,
+      [firstName, lastName, phone, address, postalCode, city, country, birthDate, birthPlace, latitude, longitude, wifiSsid || null, wifiPassword || null, wifiNotes || null, req.userId]
     );
     res.json({ success: true, message: 'Profil mis à jour !' });
   } catch(e) {
@@ -207,6 +209,45 @@ router.put('/sitter/complete', auth, async (req, res) => {
       [bio, hourlyRate, skills, available, acceptsCamera, req.userId]
     );
     res.json({ success: true, message: 'Profil mis à jour !' });
+  } catch(e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ── INFOS MAISON : réservées à la babysitter d'une garde confirmée ──
+router.get('/house/:bookingId', auth, async (req, res) => {
+  try {
+    const b = await pool.query(
+      'SELECT parent_id, sitter_id, status, address FROM bookings WHERE id = $1',
+      [req.params.bookingId]
+    );
+    if (b.rows.length === 0) {
+      return res.status(404).json({ error: 'Réservation introuvable.' });
+    }
+    const booking = b.rows[0];
+
+    // Seule la babysitter de CETTE réservation peut consulter
+    if (String(booking.sitter_id) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Accès refusé.' });
+    }
+
+    // Uniquement si la garde est confirmée
+    if (booking.status !== 'confirmed') {
+      return res.status(403).json({ error: 'Disponible une fois la garde confirmée.' });
+    }
+
+    const p = await pool.query(
+      'SELECT wifi_ssid, wifi_password, wifi_notes FROM users WHERE id = $1',
+      [booking.parent_id]
+    );
+
+    res.json({
+      address: booking.address,
+      wifi_ssid: p.rows[0]?.wifi_ssid || null,
+      wifi_password: p.rows[0]?.wifi_password || null,
+      wifi_notes: p.rows[0]?.wifi_notes || null,
+    });
   } catch(e) {
     console.error(e);
     res.status(500).json({ error: 'Erreur serveur.' });
