@@ -21,10 +21,10 @@ router.post('/register', async (req, res) => {
 
     const hash = await bcrypt.hash(password, 10);
     const result = await pool.query(
-      `INSERT INTO users (email, password, role, first_name, last_name, verified)
-       VALUES ($1, $2, $3, $4, $5, false)
+      `INSERT INTO users (email, password, role, first_name, last_name, verified, is_parent, is_sitter)
+       VALUES ($1, $2, $3, $4, $5, false, $6, $7)
        RETURNING id, email, role, first_name, last_name`,
-      [email, hash, role, firstName, lastName]
+      [email, hash, role, firstName, lastName, role === 'parent', role === 'sitter']
     );
     const user = result.rows[0];
 
@@ -88,7 +88,8 @@ router.get('/confirm/:token', async (req, res) => {
         email: row.email,
         role: row.role,
         name: `${row.first_name} ${row.last_name}`,
-        avatar: row.role === 'parent' ? '👨‍👧' : '👩'
+        avatar: row.role === 'parent' ? '👨‍👧' : '👩',
+        hasBothRoles: row.is_parent && row.is_sitter,
       }
     });
   } catch (e) {
@@ -156,7 +157,8 @@ router.post('/login', async (req, res) => {
         email: user.email,
         role: user.role,
         name: `${user.first_name} ${user.last_name}`,
-        avatar: user.role === 'parent' ? '👨‍👧' : '👩'
+        avatar: user.role === 'parent' ? '👨‍👧' : '👩',
+        hasBothRoles: user.is_parent && user.is_sitter,
       }
     });
   } catch(e) {
@@ -192,7 +194,8 @@ router.post('/verify-2fa', async (req, res) => {
         email: user.email,
         role: user.role,
         name: `${user.first_name} ${user.last_name}`,
-        avatar: user.role === 'parent' ? '👨‍👧' : '👩'
+        avatar: user.role === 'parent' ? '👨‍👧' : '👩',
+        hasBothRoles: user.is_parent && user.is_sitter,
       }
     });
   } catch(e) {
@@ -280,4 +283,76 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// ── MIDDLEWARE AUTH (double rôle) ──
+const requireAuth = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Non autorisé.' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch { res.status(401).json({ error: 'Token invalide.' }); }
+};
+
+// ── ACTIVER LE SECOND RÔLE ──
+router.post('/add-role', requireAuth, async (req, res) => {
+  const { role } = req.body;
+  if (!['parent','sitter'].includes(role)) {
+    return res.status(400).json({ error: 'Rôle invalide.' });
+  }
+  try {
+    const col = role === 'parent' ? 'is_parent' : 'is_sitter';
+    await pool.query(`UPDATE users SET ${col} = true WHERE id = $1`, [req.userId]);
+
+    if (role === 'sitter') {
+      await pool.query(
+        'INSERT INTO sitter_profiles (user_id) VALUES ($1) ON CONFLICT DO NOTHING',
+        [req.userId]
+      );
+    }
+    res.json({ success: true, message: 'Rôle activé.' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
+
+// ── BASCULER D'UN ESPACE À L'AUTRE ──
+router.post('/switch-role', requireAuth, async (req, res) => {
+  const { role } = req.body;
+  if (!['parent','sitter'].includes(role)) {
+    return res.status(400).json({ error: 'Rôle invalide.' });
+  }
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [req.userId]);
+    const user = result.rows[0];
+    if (!user) return res.status(404).json({ error: 'Compte introuvable.' });
+
+    const allowed = role === 'parent' ? user.is_parent : user.is_sitter;
+    if (!allowed) return res.status(403).json({ error: "Ce rôle n'est pas activé sur votre compte." });
+
+    await pool.query('UPDATE users SET role = $1 WHERE id = $2', [role, req.userId]);
+
+    const token = jwt.sign(
+      { userId: user.id, role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role,
+        name: `${user.first_name} ${user.last_name}`,
+        avatar: role === 'parent' ? '👨‍👧' : '👩',
+        hasBothRoles: user.is_parent && user.is_sitter,
+      }
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erreur serveur.' });
+  }
+});
 module.exports = router;
