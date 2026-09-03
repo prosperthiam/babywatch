@@ -695,7 +695,7 @@ const LandingPage = ({ onStart, onLogin, lang, onLangChange, t = (k) => k }) => 
 };
 
 // ─── NAV ──────────────────────────────────────────────────────
-const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange }) => {
+const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange, onSwitchRole }) => {
   const isParent = user.role === "parent";
   const t = useTranslation(lang);
 
@@ -737,9 +737,21 @@ useEffect(() => {
     <nav style={{ position:"fixed", top:0, left:0, right:0, height:G.navH, background:G.panel, borderBottom:`1px solid ${G.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", zIndex:100, boxShadow:"0 2px 20px #0005" }}>
       <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.25rem", color:"#fff" }}>
         🍼 Baby<span style={{ color:G.teal }}>Watch</span>
-        <span style={{ marginLeft:10, fontSize:"0.68rem", fontWeight:500, fontFamily:"'Inter',sans-serif", background: isParent?G.teal+"22":G.amber+"22", color: isParent?G.teal:G.amber, padding:"2px 8px", borderRadius:100 }}>
-          {isParent ? "👨‍👧 Parent" : "👩 Babysitter"}
-        </span>
+        {user.hasBothRoles ? (
+          <span style={{ marginLeft:10, display:"inline-flex", background:G.card, border:`1px solid ${G.border}`, borderRadius:100, padding:2, verticalAlign:"middle" }}>
+            {[["parent","👨‍👧 Parent",G.teal],["sitter","👩 Babysitter",G.amber]].map(([r,label,col]) => (
+              <button key={r} onClick={() => user.role !== r && onSwitchRole(r)}
+                title={t('switchRoleHint')}
+                style={{ border:"none", cursor: user.role===r?"default":"pointer", background: user.role===r ? col+"22" : "transparent", color: user.role===r ? col : G.muted, padding:"3px 11px", borderRadius:100, fontFamily:"'Inter',sans-serif", fontSize:"0.68rem", fontWeight:600 }}>
+                {label}
+              </button>
+            ))}
+          </span>
+        ) : (
+          <span style={{ marginLeft:10, fontSize:"0.68rem", fontWeight:500, fontFamily:"'Inter',sans-serif", background: isParent?G.teal+"22":G.amber+"22", color: isParent?G.teal:G.amber, padding:"2px 8px", borderRadius:100 }}>
+            {isParent ? "👨‍👧 Parent" : "👩 Babysitter"}
+          </span>
+        )}
       </div>
       <div style={{ display:"flex", gap:4, alignItems:"center" }}>
         {navItems.map(item => (
@@ -1068,7 +1080,7 @@ const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
   );
 };
 // ─── PARENT PROFILE ───────────────────────────────────────────
-const ParentProfile = ({ user, showToast, t = (k) => k }) => {
+const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole }) => {
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState(user.name?.split(" ")[0] || "");
   const [lastName, setLastName] = useState(user.name?.split(" ")[1] || "");
@@ -1201,6 +1213,16 @@ const ParentProfile = ({ user, showToast, t = (k) => k }) => {
           </div>
         </div>
       </Card>
+
+      {!user.hasBothRoles && (
+      <Card style={{ marginTop:16, borderColor:G.purple+"33" }}>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>{t('otherRoleTitle')}</div>
+        <div style={{ color:G.muted, fontSize:"0.85rem", lineHeight:1.65, marginBottom:16 }}>{t('otherRoleDesc')}</div>
+        <Btn onClick={onAddRole} variant="purple" disabled={addingRole}>
+          {addingRole ? t('saving') : t('otherRoleCta')}
+        </Btn>
+      </Card>
+      )}
     </div>
   );
 };
@@ -1945,7 +1967,7 @@ const AvailabilityCalendar = ({ showToast, t = (k) => k }) => {
   );
 };
 // ─── SITTER PROFILE ───────────────────────────────────────────
-const SitterProfile = ({ user, bookings, showToast, t = (k) => k }) => {
+const SitterProfile = ({ user, bookings, showToast, t = (k) => k, onAddRole, addingRole }) => {
   const my = bookings.filter(b => b.sitterId === user.id && b.status === "completed");
   const [tab, setTab] = useState("profile"); // profile | availability | identity | stats
   const [saving, setSaving] = useState(false);
@@ -2239,6 +2261,16 @@ const SitterProfile = ({ user, bookings, showToast, t = (k) => k }) => {
               </div>
             </div>
           </Card>
+
+          {!user.hasBothRoles && (
+          <Card style={{ borderColor:G.purple+"33" }}>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>{t('otherRoleTitle')}</div>
+            <div style={{ color:G.muted, fontSize:"0.85rem", lineHeight:1.65, marginBottom:16 }}>{t('otherRoleDesc')}</div>
+            <Btn onClick={onAddRole} variant="purple" disabled={addingRole}>
+              {addingRole ? t('saving') : t('otherRoleCta')}
+            </Btn>
+          </Card>
+          )}
         </div>
       )}
 
@@ -3080,6 +3112,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [sessionChecked, setSessionChecked] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [addingRole, setAddingRole] = useState(false);
   const [page, setPage] = useState("home");
   const [bookings, setBookings] = useState([]);
   const [toast, showToast] = useToast();
@@ -3173,6 +3206,47 @@ export default function App() {
     localStorage.removeItem('user');
   };
 
+  // Active le second role sur le meme compte
+  const handleAddRole = async () => {
+    const target = user.role === "parent" ? "sitter" : "parent";
+    setAddingRole(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/auth/add-role`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: JSON.stringify({ role: target })
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast("❌ " + (data.error || t('connectionError')), "err"); setAddingRole(false); return; }
+      const updated = { ...user, hasBothRoles: true };
+      setUser(updated);
+      try { localStorage.setItem('user', JSON.stringify(updated)); } catch(e) {}
+      showToast(t('otherRoleAdded'), "ok");
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
+    setAddingRole(false);
+  };
+
+  // Bascule entre l'espace parent et l'espace babysitter du meme compte
+  const handleSwitchRole = async (newRole) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/auth/switch-role`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: JSON.stringify({ role: newRole })
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast("❌ " + (data.error || t('connectionError')), "err"); return; }
+      localStorage.setItem('token', data.token);
+      const updated = { ...user, ...data.user };
+      setUser(updated);
+      try { localStorage.setItem('user', JSON.stringify(updated)); } catch(e) {}
+      setPage("home");
+      showToast(newRole === "parent" ? t('switchedToParent') : t('switchedToSitter'), "ok");
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
+  };
+
   const isConfirmPage = window.location.pathname === "/confirm" || (window.location.search.includes("token=") && !window.location.pathname.includes("reset"));
   const isResetPage   = window.location.pathname === "/reset-password" || (window.location.search.includes("token=") && window.location.pathname.includes("reset"));
 
@@ -3228,7 +3302,7 @@ export default function App() {
   if (page==="search")   return <SearchSitters onBook={addBooking} showToast={showToast} t={t}/>;
   if (page==="map")      return <MapView user={user} showToast={showToast} t={t}/>;
   if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview} t={t}/>;
-  if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast} t={t}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast} t={t}/>;
+  if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast} t={t} onAddRole={handleAddRole} addingRole={addingRole}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast} t={t} onAddRole={handleAddRole} addingRole={addingRole}/>;
   if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission} t={t}/>;
   if (page==="camera")   return <CameraPage user={user} t={t}/>;
 if (page==="children") return <ChildrenManager showToast={showToast} t={t}/>;
@@ -3249,7 +3323,7 @@ if (page==="children") return <ChildrenManager showToast={showToast} t={t}/>;
         select option{background:#162030}
       `}</style>
       <ErrorBoundary>
-        <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout} lang={lang} onLangChange={changeLang}/>
+        <Nav user={user} activePage={page} onNav={setPage} onLogout={handleLogout} lang={lang} onLangChange={changeLang} onSwitchRole={handleSwitchRole}/>
         <main style={{ paddingTop:64, minHeight:"100vh" }}>
           <div style={{ maxWidth:1100, margin:"0 auto", padding:"32px 24px" }}>
             {renderPage()}

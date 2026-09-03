@@ -1,5 +1,13 @@
 export const translations = {
   fr: {
+    otherRoleTitle: "Vous cherchez aussi à garder des enfants ?",
+otherRoleDesc: "Activez votre espace babysitter sur ce même compte. Vous pourrez basculer entre les deux espaces à tout moment, sans vous reconnecter.",
+otherRoleCta: "Activer mon second espace",
+otherRoleAdded: "✅ Espace activé. Utilisez le sélecteur en haut pour basculer.",
+switchRoleHint: "Changer d'espace",
+switchedToParent: "👨‍👧 Espace parent",
+switchedToSitter: "👩 Espace babysitter",
+
     forgotPwSubtitle: "Entrez votre email pour recevoir un lien de réinitialisation.",
 sendLink: "Envoyer le lien →",
 emailSent: "Email envoyé !",
@@ -347,6 +355,14 @@ secureConnection: "Connexion sécurisée · RGPD",
   },
 
   en: {
+    otherRoleTitle: "Also looking to babysit?",
+otherRoleDesc: "Activate your babysitter space on this same account. You can switch between both spaces at any time, without signing in again.",
+otherRoleCta: "Activate my second space",
+otherRoleAdded: "✅ Space activated. Use the switcher at the top.",
+switchRoleHint: "Switch space",
+switchedToParent: "👨‍👧 Parent space",
+switchedToSitter: "👩 Babysitter space",
+
     forgotPwSubtitle: "Enter your email to receive a reset link.",
 sendLink: "Send link →",
 emailSent: "Email sent!",
@@ -696,6 +712,14 @@ secureConnection: "Secure connection · GDPR",
   },
 
   ar: {
+    otherRoleTitle: "هل ترغب أيضاً في رعاية الأطفال؟",
+otherRoleDesc: "فعّل مساحة المربية على نفس الحساب. يمكنك التبديل بين المساحتين في أي وقت، دون تسجيل دخول جديد.",
+otherRoleCta: "تفعيل مساحتي الثانية",
+otherRoleAdded: "✅ تم تفعيل المساحة. استخدم المبدّل في الأعلى.",
+switchRoleHint: "تغيير المساحة",
+switchedToParent: "👨‍👧 مساحة ولي الأمر",
+switchedToSitter: "👩 مساحة المربية",
+
     forgotPwSubtitle: "أدخل بريدك الإلكتروني لتلقي رابط إعادة التعيين.",
 sendLink: "إرسال الرابط ←",
 emailSent: "تم إرسال البريد!",
