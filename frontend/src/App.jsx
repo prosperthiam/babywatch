@@ -5,13 +5,76 @@ const API = 'https://babywatch-production.up.railway.app/api';
 
 
 const G = {
-  night: "#0f1923", panel: "#162030", card: "#1e2d40",
-  border: "rgba(255,255,255,0.08)", coral: "#ff5f57",
-  teal: "#2dd4bf", green: "#4ade80", amber: "#fbbf24",
-  purple: "#a78bfa", text: "#e2e8f0", muted: "#64748b",
-  cream: "#f0f4ff", navH: 64,
+  // ── Surfaces (3 niveaux, pas 51 cartes identiques) ──
+  night: "#0f1923",   // fond application
+  panel: "#162030",   // surface surélevée (nav, modales)
+  card:  "#1e2d40",   // surface de contenu
+  sunk:  "#0c141d",   // creux (champs, code)
+
+  border:      "rgba(255,255,255,0.07)",
+  borderStrong:"rgba(255,255,255,0.13)",
+
+  // ── Couleurs de sens ──
+  teal:   "#2dd4bf",  // action principale, parent
+  amber:  "#fbbf24",  // babysitter
+  green:  "#4ade80",  // succès, vérifié
+  coral:  "#ff5f57",  // alerte, destructif
+  purple: "#a78bfa",  // secondaire
+
+  // ── Texte : 3 niveaux ──
+  text:   "#e8edf4",  // principal
+  muted:  "#8b9bb0",  // secondaire (contraste relevé pour l'accessibilité)
+  faint:  "#5d6b7d",  // tertiaire
+
+  cream: "#f0f4ff",
+  navH: 60,
 };
 
+// Échelle typographique — 6 crans au lieu de 20 valeurs arbitraires
+const TY = {
+  display: { fontSize:"1.75rem", fontWeight:800, letterSpacing:"-0.02em", lineHeight:1.15 },
+  title:   { fontSize:"1.15rem", fontWeight:700, letterSpacing:"-0.01em", lineHeight:1.25 },
+  section: { fontSize:"0.8rem",  fontWeight:600, letterSpacing:"0.02em" },
+  body:    { fontSize:"0.875rem",fontWeight:400, lineHeight:1.6 },
+  meta:    { fontSize:"0.78rem", fontWeight:400, lineHeight:1.5 },
+  micro:   { fontSize:"0.7rem",  fontWeight:500, letterSpacing:"0.01em" },
+};
+
+// Rayons — 3 valeurs au lieu de 11
+const R = { sm:8, md:12, lg:16, pill:100 };
+
+// ── Icônes SVG (remplacent les emoji de navigation) ──
+const Icon = ({ name, size = 18, color = "currentColor", style = {} }) => {
+  const paths = {
+    home:      "M3 10.5 12 3l9 7.5M5.5 9.5V20h13V9.5",
+    search:    "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16ZM21 21l-4.35-4.35",
+    map:       "M9 3 3 5.5v15L9 18l6 3 6-2.5v-15L15 6 9 3ZM9 3v15M15 6v15",
+    calendar:  "M7 3v3M17 3v3M3.5 9.5h17M5 6h14a1.5 1.5 0 0 1 1.5 1.5v12A1.5 1.5 0 0 1 19 21H5a1.5 1.5 0 0 1-1.5-1.5v-12A1.5 1.5 0 0 1 5 6Z",
+    user:      "M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM4.5 20.5a7.5 7.5 0 0 1 15 0",
+    video:     "M3.5 7.5A1.5 1.5 0 0 1 5 6h9a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 14 18H5a1.5 1.5 0 0 1-1.5-1.5v-9ZM15.5 10.5 21 7.5v9l-5.5-3",
+    child:     "M12 13a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM5 21a7 7 0 0 1 14 0M9.5 8.5h.01M14.5 8.5h.01",
+    invoice:   "M6 2.5h9l4 4V21a.5.5 0 0 1-.5.5h-12A.5.5 0 0 1 6 21V3a.5.5 0 0 1 .5-.5ZM14.5 2.5V7h4.5M9 12h6M9 16h4",
+    repeat:    "M4 9V7.5A2.5 2.5 0 0 1 6.5 5H18M18 5l-3-3M18 5l-3 3M20 15v1.5a2.5 2.5 0 0 1-2.5 2.5H6M6 19l3 3M6 19l3-3",
+    chat:      "M20.5 12c0 4.1-3.8 7.5-8.5 7.5a9.9 9.9 0 0 1-3-.45L4 21l1.2-3.6A7.1 7.1 0 0 1 3.5 12c0-4.1 3.8-7.5 8.5-7.5s8.5 3.4 8.5 7.5Z",
+    star:      "m12 3.5 2.6 5.6 6 .8-4.4 4.2 1.1 6.1L12 17.3 6.7 20.2l1.1-6.1L3.4 9.9l6-.8L12 3.5Z",
+    heart:     "M12 20s-7.5-4.7-7.5-9.4A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7.5 2.6C19.5 15.3 12 20 12 20Z",
+    shield:    "M12 3 5 6v6c0 4.2 2.9 7.6 7 9 4.1-1.4 7-4.8 7-9V6l-7-3Z",
+    wifi:      "M2 8.8a15 15 0 0 1 20 0M5.5 12.4a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0M12 19.5h.01",
+    alert:     "M12 8v5M12 16.5h.01M10.3 3.9 2.6 17.2A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.8L13.7 3.9a2 2 0 0 0-3.4 0Z",
+    logout:    "M9 21H5.5A1.5 1.5 0 0 1 4 19.5v-15A1.5 1.5 0 0 1 5.5 3H9M16 16l4-4-4-4M20 12H9",
+    check:     "m4.5 12.5 5 5 10-11",
+    plus:      "M12 5v14M5 12h14",
+    clock:     "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3.5 2",
+    pin:       "M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11ZM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
+  };
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+      style={{ flexShrink:0, ...style }} aria-hidden="true">
+      <path d={paths[name] || paths.home} />
+    </svg>
+  );
+};
 // ─── ERROR BOUNDARY ───────────────────────────────────────────
 // Évite l'écran blanc : capture les erreurs JS et affiche un message lisible.
 class ErrorBoundary extends Component {
@@ -701,20 +764,19 @@ const Nav = ({ user, activePage, onNav, onLogout, lang, onLangChange, onSwitchRo
 
   const navItems = isParent
     ? [
-        { id:"home",     label:t('home'),     icon:"🏠" },
-        { id:"search",   label:t('search'),   icon:"🔍" },
-        { id:"map",      label:t('map'),       icon:"🗺️" },
-        { id:"bookings", label:t('bookings'),  icon:"📋" },
-        { id:"profile",  label:t('profile'),   icon:"👤" },
-        { id:"camera",   label:t('camera'),    icon:"📹" },
-        { id:"children", label:"Mes enfants", icon:"👶" },
+        { id:"home",     label:t('home'),     icon:"home" },
+        { id:"search",   label:t('search'),   icon:"search" },
+        { id:"map",      label:t('map'),      icon:"map" },
+        { id:"bookings", label:t('bookings'), icon:"calendar" },
+        { id:"profile",  label:t('profile'),  icon:"user" },
+        { id:"camera",   label:t('camera'),   icon:"video" },
+        { id:"children", label:t('children'), icon:"child" },
       ]
     : [
-        { id:"home",     label:t('home'),      icon:"🏠" },
-        { id:"missions", label:t('missions'),  icon:"📋" },
-        { id:"profile",  label:t('profile'),   icon:"👤" },
-        { id:"camera",   label:t('camera'),    icon:"📹" },
-        { id:"children", label:"Mes enfants", icon:"👶" },
+        { id:"home",     label:t('home'),     icon:"home" },
+        { id:"missions", label:t('missions'), icon:"calendar" },
+        { id:"profile",  label:t('profile'),  icon:"user" },
+        { id:"camera",   label:t('camera'),   icon:"video" },
       ];
 const [unreadCount, setUnreadCount] = useState(0);
 
@@ -733,48 +795,65 @@ useEffect(() => {
 }, []);
     
 
+  const accent = isParent ? G.teal : G.amber;
+
   return (
-    <nav style={{ position:"fixed", top:0, left:0, right:0, height:G.navH, background:G.panel, borderBottom:`1px solid ${G.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", zIndex:100, boxShadow:"0 2px 20px #0005" }}>
-      <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.25rem", color:"#fff" }}>
-        🍼 Baby<span style={{ color:G.teal }}>Watch</span>
+    <nav style={{ position:"fixed", top:0, left:0, right:0, height:G.navH, background:"rgba(22,32,48,0.88)", backdropFilter:"blur(12px)", borderBottom:`1px solid ${G.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", zIndex:100 }}>
+
+      {/* Marque + rôle */}
+      <div style={{ display:"flex", alignItems:"center", gap:12, minWidth:0 }}>
+        <span style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"1.05rem", color:"#fff", letterSpacing:"-0.01em", whiteSpace:"nowrap" }}>
+          Baby<span style={{ color:G.teal }}>Watch</span>
+        </span>
         {user.hasBothRoles ? (
-          <span style={{ marginLeft:10, display:"inline-flex", background:G.card, border:`1px solid ${G.border}`, borderRadius:100, padding:2, verticalAlign:"middle" }}>
-            {[["parent","👨‍👧 Parent",G.teal],["sitter","👩 Babysitter",G.amber]].map(([r,label,col]) => (
-              <button key={r} onClick={() => user.role !== r && onSwitchRole(r)}
-                title={t('switchRoleHint')}
-                style={{ border:"none", cursor: user.role===r?"default":"pointer", background: user.role===r ? col+"22" : "transparent", color: user.role===r ? col : G.muted, padding:"3px 11px", borderRadius:100, fontFamily:"'Inter',sans-serif", fontSize:"0.68rem", fontWeight:600 }}>
+          <span style={{ display:"inline-flex", background:G.sunk, border:`1px solid ${G.border}`, borderRadius:R.pill, padding:2 }}>
+            {[["parent",t('parentShort'),G.teal],["sitter",t('sitterShort'),G.amber]].map(([r,label,col]) => (
+              <button key={r} onClick={() => user.role !== r && onSwitchRole(r)} title={t('switchRoleHint')}
+                style={{ border:"none", cursor: user.role===r?"default":"pointer", background: user.role===r ? col+"1f" : "transparent", color: user.role===r ? col : G.faint, padding:"4px 12px", borderRadius:R.pill, ...TY.micro, fontFamily:"'Inter',sans-serif", transition:"color .15s" }}>
                 {label}
               </button>
             ))}
           </span>
         ) : (
-          <span style={{ marginLeft:10, fontSize:"0.68rem", fontWeight:500, fontFamily:"'Inter',sans-serif", background: isParent?G.teal+"22":G.amber+"22", color: isParent?G.teal:G.amber, padding:"2px 8px", borderRadius:100 }}>
-            {isParent ? "👨‍👧 Parent" : "👩 Babysitter"}
+          <span style={{ ...TY.micro, fontFamily:"'Inter',sans-serif", color:accent, background:accent+"18", padding:"3px 10px", borderRadius:R.pill, whiteSpace:"nowrap" }}>
+            {isParent ? t('parentShort') : t('sitterShort')}
           </span>
         )}
       </div>
-      <div style={{ display:"flex", gap:4, alignItems:"center" }}>
-        {navItems.map(item => (
-          <button key={item.id} onClick={() => onNav(item.id)} style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", borderRadius:8, border:"none", background: activePage===item.id?(isParent?G.teal+"22":G.amber+"22"):"transparent", color: activePage===item.id?(isParent?G.teal:G.amber):G.muted, fontFamily:"'Inter',sans-serif", fontWeight: activePage===item.id?600:400, fontSize:"0.85rem", cursor:"pointer" }}>
-            {item.icon} {item.label}
-          </button>
-        ))}
+
+      {/* Onglets */}
+      <div style={{ display:"flex", gap:2, alignItems:"center", overflowX:"auto", scrollbarWidth:"none" }}>
+        {navItems.map(item => {
+          const on = activePage === item.id;
+          return (
+            <button key={item.id} onClick={() => onNav(item.id)}
+              style={{ position:"relative", display:"flex", alignItems:"center", gap:7, padding:"7px 12px", borderRadius:R.sm, border:"none", background: on ? "rgba(255,255,255,0.06)" : "transparent", color: on ? "#fff" : G.muted, fontFamily:"'Inter',sans-serif", ...TY.meta, fontWeight: on ? 600 : 400, cursor:"pointer", whiteSpace:"nowrap", transition:"color .15s, background .15s" }}>
+              <Icon name={item.icon} size={17} color={on ? accent : G.faint} />
+              {item.label}
+              {item.id==="bookings" && unreadCount>0 && (
+                <span style={{ background:G.coral, color:"#fff", borderRadius:R.pill, minWidth:17, height:17, ...TY.micro, fontWeight:700, display:"inline-flex", alignItems:"center", justifyContent:"center", padding:"0 5px" }}>
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
-      <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:8, background:G.card, borderRadius:10, padding:"7px 12px", border:`1px solid ${G.border}` }}>
-          <span style={{ fontSize:"1.3rem" }}>{user.avatar}</span>
-          <div>
-            <div style={{ fontSize:"0.78rem", fontWeight:600, color:G.text }}>{user.name?.split(" ")[0]}</div>
-            <div style={{ fontSize:"0.65rem", color:G.muted }}>{user.email}</div>
-          </div>
-        </div>
-        <select value={lang} onChange={e => onLangChange(e.target.value)} style={{ background:G.card, border:`1px solid ${G.border}`, color:G.text, borderRadius:8, padding:"6px 10px", fontFamily:"'Inter',sans-serif", fontSize:"0.82rem", cursor:"pointer", outline:"none" }}>
-          <option value="fr">🇫🇷 FR</option>
-          <option value="en">🇬🇧 EN</option>
-          <option value="ar">🇸🇦 AR</option>
+
+      {/* Compte */}
+      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+        <span style={{ ...TY.meta, color:G.muted, maxWidth:150, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+          {user.name?.split(" ")[0]}
+        </span>
+        <select value={lang} onChange={e=>onLangChange(e.target.value)} aria-label="Langue"
+          style={{ background:"transparent", border:`1px solid ${G.border}`, color:G.muted, borderRadius:R.sm, padding:"5px 7px", fontFamily:"'Inter',sans-serif", ...TY.micro, cursor:"pointer", outline:"none" }}>
+          <option value="fr">FR</option>
+          <option value="en">EN</option>
+          <option value="ar">AR</option>
         </select>
-        <button onClick={onLogout} style={{ background:"rgba(255,95,87,0.12)", border:"1px solid rgba(255,95,87,0.25)", color:G.coral, padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:"0.78rem", fontWeight:600 }}>
-          {t('logout')}
+        <button onClick={onLogout} title={t('logout')} aria-label={t('logout')}
+          style={{ background:"transparent", border:`1px solid ${G.border}`, color:G.muted, width:30, height:30, borderRadius:R.sm, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <Icon name="logout" size={15} />
         </button>
       </div>
     </nav>
@@ -783,302 +862,167 @@ useEffect(() => {
 // ─── PARENT HOME ──────────────────────────────────────────────
 const ParentHome = ({ user, bookings, onNav, t = (k) => k }) => {
   const myBookings = bookings.filter(b => b.parentId === user.id);
-  const upcoming = myBookings.filter(b => b.status==="confirmed"||b.status==="pending");
+  const upcoming   = myBookings.filter(b => b.status==="confirmed" || b.status==="pending");
+  const completed  = myBookings.filter(b => b.status==="completed");
+  const pending    = myBookings.filter(b => b.status==="pending");
   const next = upcoming[0];
+  const [favSitters, setFavSitters] = useState([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/favorites`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setFavSitters(Array.isArray(d) ? d : []))
+      .catch(console.error);
+  }, []);
+
+  const firstName = user.name?.split(" ")[0] || "";
+  const hour = new Date().getHours();
+  const greeting = hour < 18 ? t('greetingDay') : t('greetingEvening');
+
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-      <div style={{ background:"linear-gradient(135deg,#1a2d45,#0f1f35)", borderRadius:18, padding:"32px 28px", border:`1px solid ${G.border}` }}>
-        <div style={{ fontSize:"0.78rem", fontWeight:700, color:G.teal, textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>{t('hello')}</div>
-        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.8rem", color:"#fff", marginBottom:6 }}>{user.name}</div>
-        <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:20 }}>{t('parentWelcome')}</div>
-        <div style={{ display:"flex", gap:10 }}>
-          <Btn onClick={() => onNav("search")} variant="teal">{t('findSitter')}</Btn>
-          <Btn onClick={() => onNav("camera")} variant="ghost">{t('liveCamera')}</Btn>
-        </div>
+    <div style={{ display:"flex", flexDirection:"column", gap:28 }}>
+
+      {/* Salutation — pas de bloc dégradé, juste une vraie hiérarchie */}
+      <div>
+        <div style={{ ...TY.meta, color:G.faint, marginBottom:6 }}>{greeting}</div>
+        <h1 style={{ ...TY.display, color:"#fff", fontFamily:"'Nunito',sans-serif", margin:0 }}>
+          {firstName}
+        </h1>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
-        {[
-          { label:t('upcomingBookings'),  val:upcoming.length,                                    icon:"📅", color:G.teal   },
-          { label:t('pending'),           val:myBookings.filter(b=>b.status==="pending").length,   icon:"⏳", color:G.amber  },
-          { label:t('completedBookings'), val:myBookings.filter(b=>b.status==="completed").length, icon:"✅", color:G.green  },
-          { label:t('favoriteSitters'),   val:2,                                                   icon:"⭐", color:G.purple },
-        ].map(s => (
-          <Card key={s.label} style={{ textAlign:"center" }}>
-            <div style={{ fontSize:"1.8rem", marginBottom:6 }}>{s.icon}</div>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.8rem", color:s.color }}>{s.val}</div>
-            <div style={{ fontSize:"0.72rem", color:G.muted, marginTop:3 }}>{s.label}</div>
-          </Card>
-        ))}
-      </div>
-      {next && (
-        <Card>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{t('nextBooking')}</div>
+
+      {/* La prochaine garde : l'information qui compte vraiment */}
+      {next ? (
+        <section style={{ background:G.card, border:`1px solid ${G.border}`, borderRadius:R.lg, overflow:"hidden" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px", borderBottom:`1px solid ${G.border}`, background:G.panel }}>
+            <span style={{ ...TY.section, color:G.muted, textTransform:"uppercase" }}>{t('nextBooking')}</span>
             <StatusBadge status={next.status} />
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-            <span style={{ fontSize:"2.5rem" }}>{next.sitterAvatar}</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight:600, color:"#fff", marginBottom:3 }}>{next.sitterName}</div>
-              <div style={{ color:G.muted, fontSize:"0.82rem" }}>📅 {next.date} · {next.time} · ⏱ {next.duration} · 👶 {next.children}</div>
-              <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:2 }}>📍 {next.address}</div>
+
+          <div style={{ padding:"20px", display:"flex", alignItems:"flex-start", gap:16, flexWrap:"wrap" }}>
+            <div style={{ width:46, height:46, borderRadius:R.md, background:G.sunk, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"1.4rem", flexShrink:0 }}>
+              {next.sitterAvatar || "👩"}
             </div>
-            {next.camera && <Btn onClick={() => onNav("camera")} variant="teal" size="sm">📹 Live</Btn>}
+
+            <div style={{ flex:1, minWidth:180 }}>
+              <div style={{ ...TY.title, color:"#fff", marginBottom:10 }}>{next.sitterName}</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:"6px 18px" }}>
+                {[
+                  ["calendar", `${next.date} · ${next.time}`],
+                  ["clock", next.duration],
+                  ["pin", next.address],
+                ].map(([ic, val]) => (
+                  <span key={ic} style={{ display:"inline-flex", alignItems:"center", gap:6, ...TY.meta, color:G.muted }}>
+                    <Icon name={ic} size={14} color={G.faint} />
+                    {val}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:10 }}>
+              <div style={{ ...TY.title, color:G.teal, fontFamily:"'Nunito',sans-serif" }}>{next.price}€</div>
+              {next.camera && next.status==="confirmed" && (
+                <Btn onClick={() => onNav("camera")} variant="teal" size="sm">
+                  <Icon name="video" size={14} /> Live
+                </Btn>
+              )}
+            </div>
           </div>
-        </Card>
+        </section>
+      ) : (
+        <section style={{ border:`1px dashed ${G.borderStrong}`, borderRadius:R.lg, padding:"36px 24px", textAlign:"center" }}>
+          <div style={{ ...TY.title, color:"#fff", marginBottom:8 }}>{t('noUpcomingTitle')}</div>
+          <div style={{ ...TY.body, color:G.muted, marginBottom:20, maxWidth:"42ch", margin:"0 auto 20px" }}>
+            {t('noUpcomingDesc')}
+          </div>
+          <Btn onClick={() => onNav("search")} variant="teal">{t('findSitter')}</Btn>
+        </section>
       )}
-      <Card>
-        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:14 }}>{t('recentHistory')}</div>
-        {myBookings.filter(b=>b.status==="completed").slice(0,3).map(b => (
-          <div key={b.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:`1px solid ${G.border}` }}>
-            <span style={{ fontSize:"1.5rem" }}>{b.sitterAvatar}</span>
-            <div style={{ flex:1 }}>
-              <div style={{ fontWeight:600, fontSize:"0.88rem", color:G.text }}>{b.sitterName}</div>
-              <div style={{ color:G.muted, fontSize:"0.75rem" }}>{b.date} · {b.duration}</div>
-            </div>
-            <div style={{ textAlign:"right" }}>
-              <div style={{ color:G.text, fontWeight:700 }}>{b.price}€</div>
-              {b.rating && <div style={{ color:G.amber, fontSize:"0.72rem" }}>{"⭐".repeat(b.rating)}</div>}
-            </div>
+
+      {/* Chiffres : discrets, alignés, sans carte autour de chacun */}
+      <section style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))", gap:1, background:G.border, border:`1px solid ${G.border}`, borderRadius:R.md, overflow:"hidden" }}>
+        {[
+          [upcoming.length,  t('upcomingBookings')],
+          [pending.length,   t('pending')],
+          [completed.length, t('completedBookings')],
+          [favSitters.length,t('favoriteSitters')],
+        ].map(([val, label]) => (
+          <div key={label} style={{ background:G.night, padding:"16px 18px" }}>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"1.5rem", color:"#fff", lineHeight:1 }}>{val}</div>
+            <div style={{ ...TY.micro, color:G.faint, marginTop:6 }}>{label}</div>
           </div>
         ))}
-        <button onClick={() => onNav("bookings")} style={{ marginTop:12, background:"none", border:"none", color:G.teal, fontSize:"0.82rem", fontWeight:600, cursor:"pointer" }}>{t('seeAll')}</button>
-      </Card>
-    </div>
-  );
-};
+      </section>
 
-// ─── CHILDREN MANAGER ─────────────────────────────────────────
-const CHILD_AVATARS = ["👶","🧒","👦","👧","🍼","🧸"];
-
-const ChildrenManager = ({ showToast, t = (k) => k }) => {
-  const [children, setChildren] = useState([]);
-  const [editing, setEditing] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const token = localStorage.getItem('token');
-
-  const load = () => {
-    fetch(`${API}/children`, { headers:{ 'Authorization':`Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { setChildren(Array.isArray(d)?d:[]); setLoading(false); })
-      .catch(() => setLoading(false));
-  };
-
-  useEffect(() => { if (token) load(); }, []);
-
-  const remove = async (id) => {
-    if (!confirm(t('confirmDeleteChild'))) return;
-    await fetch(`${API}/children/${id}`, { method:'DELETE', headers:{ 'Authorization':`Bearer ${token}` } });
-    setChildren(prev => prev.filter(c => c.id !== id));
-    showToast(t('childDeleted'), "err");
-  };
-
-  const age = (birthDate) => {
-    if (!birthDate) return null;
-    const diff = Date.now() - new Date(birthDate).getTime();
-    const years = Math.floor(diff / 31557600000);
-    if (years < 1) return `${Math.floor(diff / 2629800000)} mois`;
-    return `${years} an${years>1?'s':''}`;
-  };
-
-  if (editing !== null) return (
-    <ChildForm
-      child={editing}
-      onCancel={() => setEditing(null)}
-      onSaved={(saved) => {
-        setChildren(prev => editing.id ? prev.map(c => c.id===saved.id?saved:c) : [...prev, saved]);
-        setEditing(null);
-        showToast(t('childSaved'), "ok");
-      }}
-      showToast={showToast}
-      t={t}
-    />
-  );
-
-  return (
-    <div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-        <div>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>{t('myChildren')}</div>
-          <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('childrenSubtitle')}</div>
-        </div>
-        <Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
+      {/* Actions */}
+      <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+        <Btn onClick={() => onNav("search")} variant="teal">
+          <Icon name="search" size={15} /> {t('findSitterTitle')}
+        </Btn>
+        <Btn onClick={() => onNav("map")} variant="ghost">
+          <Icon name="map" size={15} /> {t('map')}
+        </Btn>
+        <Btn onClick={() => onNav("children")} variant="ghost">
+          <Icon name="child" size={15} /> {t('children')}
+        </Btn>
       </div>
 
-      {loading && <div style={{ color:G.muted, textAlign:"center", padding:30 }}>{t('loading')}</div>}
-
-      {!loading && children.length === 0 && (
-        <Card style={{ textAlign:"center", padding:40 }}>
-          <div style={{ fontSize:"3rem", marginBottom:12 }}>👶</div>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>{t('noChildren')}</div>
-          <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('childrenSubtitle')}</div>
-          <Btn onClick={() => setEditing({})} variant="teal">{t('createFirstProfile')}</Btn>
-        </Card>
+      {/* Favoris */}
+      {favSitters.length > 0 && (
+        <section>
+          <div style={{ ...TY.section, color:G.muted, textTransform:"uppercase", marginBottom:12 }}>{t('favoriteSitters')}</div>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
+            {favSitters.slice(0,4).map(s => (
+              <button key={s.id} onClick={() => onNav("search")}
+                style={{ display:"flex", alignItems:"center", gap:10, background:G.card, border:`1px solid ${G.border}`, borderRadius:R.md, padding:"10px 14px", cursor:"pointer", textAlign:"left" }}>
+                <span style={{ fontSize:"1.2rem" }}>👩</span>
+                <span>
+                  <span style={{ display:"block", ...TY.meta, fontWeight:600, color:"#fff" }}>{s.first_name} {s.last_name}</span>
+                  <span style={{ display:"block", ...TY.micro, color:G.faint, marginTop:2 }}>
+                    {s.rating ? `★ ${parseFloat(s.rating).toFixed(1)}` : "—"} · {s.hourly_rate}€/h
+                  </span>
+                </span>
+                {s.verification_status === "verified" && <Icon name="shield" size={14} color={G.green} />}
+              </button>
+            ))}
+          </div>
+        </section>
       )}
 
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
-        {children.map(c => (
-          <Card key={c.id}>
-            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
-              <span style={{ fontSize:"2.5rem" }}>{c.avatar || "👶"}</span>
-              <div style={{ flex:1 }}>
-                <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"1.05rem" }}>{c.first_name}</div>
-                <div style={{ color:G.muted, fontSize:"0.78rem" }}>
-                  {age(c.birth_date) ? `🎂 ${age(c.birth_date)}` : ''}
-                  {c.bedtime ? ` · 🌙 ${c.bedtime.slice(0,5)}` : ''}
+      {/* Historique */}
+      {completed.length > 0 && (
+        <section>
+          <div style={{ display:"flex", alignItems:"baseline", justifyContent:"space-between", marginBottom:12 }}>
+            <span style={{ ...TY.section, color:G.muted, textTransform:"uppercase" }}>{t('recentHistory')}</span>
+            <button onClick={() => onNav("bookings")} style={{ background:"none", border:"none", color:G.teal, ...TY.meta, fontWeight:500, cursor:"pointer", padding:0 }}>
+              {t('seeAll')}
+            </button>
+          </div>
+          <div style={{ border:`1px solid ${G.border}`, borderRadius:R.md, overflow:"hidden" }}>
+            {completed.slice(0,3).map((b, i) => (
+              <div key={b.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"13px 16px", background:G.card, borderTop: i===0 ? "none" : `1px solid ${G.border}` }}>
+                <span style={{ fontSize:"1.1rem" }}>{b.sitterAvatar || "👩"}</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ ...TY.meta, fontWeight:600, color:G.text }}>{b.sitterName}</div>
+                  <div style={{ ...TY.micro, color:G.faint, marginTop:2 }}>{b.date} · {b.duration}</div>
                 </div>
+                {b.rating && (
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:4, ...TY.micro, color:G.amber }}>
+                    <Icon name="star" size={12} color={G.amber} /> {b.rating}
+                  </span>
+                )}
+                <span style={{ ...TY.meta, fontWeight:600, color:G.text, minWidth:44, textAlign:"right" }}>{b.price}€</span>
               </div>
-              <div style={{ display:"flex", gap:6 }}>
-                <button onClick={() => setEditing(c)} style={{ background:"rgba(255,255,255,0.06)", border:`1px solid ${G.border}`, color:G.text, borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:"0.75rem" }}>✏️</button>
-                <button onClick={() => remove(c.id)} style={{ background:"rgba(255,95,87,0.12)", border:"1px solid rgba(255,95,87,0.25)", color:G.coral, borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:"0.75rem" }}>🗑</button>
-              </div>
-            </div>
-
-            {c.allergies && (
-              <div style={{ background:"rgba(255,95,87,0.1)", border:`1px solid ${G.coral}33`, borderRadius:8, padding:"8px 12px", marginBottom:8 }}>
-                <div style={{ color:G.coral, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>{t('allergies')}</div>
-                <div style={{ color:G.text, fontSize:"0.8rem" }}>{c.allergies}</div>
-              </div>
-            )}
-            {c.medications && (
-              <div style={{ background:"rgba(251,191,36,0.1)", border:`1px solid ${G.amber}33`, borderRadius:8, padding:"8px 12px", marginBottom:8 }}>
-                <div style={{ color:G.amber, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>{t('medications')}</div>
-                <div style={{ color:G.text, fontSize:"0.8rem" }}>{c.medications}</div>
-              </div>
-            )}
-            {c.routines && (
-              <div style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.5, marginTop:6 }}>
-                <strong style={{ color:G.text }}>{t('routines')} :</strong> {c.routines}
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 };
 
-// ─── CHILD FORM ───────────────────────────────────────────────
-const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
-  const [firstName, setFirstName] = useState(child.first_name || "");
-  const [birthDate, setBirthDate] = useState(child.birth_date?.slice(0,10) || "");
-  const [gender, setGender] = useState(child.gender || "");
-  const [avatar, setAvatar] = useState(child.avatar || "👶");
-  const [allergies, setAllergies] = useState(child.allergies || "");
-  const [medicalNotes, setMedicalNotes] = useState(child.medical_notes || "");
-  const [medications, setMedications] = useState(child.medications || "");
-  const [routines, setRoutines] = useState(child.routines || "");
-  const [favoriteActivities, setFavoriteActivities] = useState(child.favorite_activities || "");
-  const [fears, setFears] = useState(child.fears || "");
-  const [bedtime, setBedtime] = useState(child.bedtime?.slice(0,5) || "");
-  const [doctorName, setDoctorName] = useState(child.doctor_name || "");
-  const [doctorPhone, setDoctorPhone] = useState(child.doctor_phone || "");
-  const [emergencyContactName, setEmergencyContactName] = useState(child.emergency_contact_name || "");
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState(child.emergency_contact_phone || "");
-  const [saving, setSaving] = useState(false);
-
-  const save = async () => {
-    if (!firstName.trim()) { showToast(t('firstNameRequired'), "err"); return; }
-    setSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      const body = { firstName, birthDate, gender, avatar, allergies, medicalNotes, medications,
-        routines, favoriteActivities, fears, bedtime, doctorName, doctorPhone,
-        emergencyContactName, emergencyContactPhone };
-      const res = await fetch(child.id ? `${API}/children/${child.id}` : `${API}/children`, {
-        method: child.id ? 'PUT' : 'POST',
-        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (res.ok) onSaved(data);
-      else showToast("❌ " + data.error, "err");
-    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
-    setSaving(false);
-  };
-
-  return (
-    <div>
-      <button onClick={onCancel} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", marginBottom:18 }}>{t('back')}</button>
-
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
-        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>
-          {child.id ? t('editChildForm') : t('newChildForm')}
-        </div>
-        <Btn onClick={save} variant="teal" disabled={saving}>{saving ? t('saving') : t('save')}</Btn>
-      </div>
-
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
-
-        <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>👶 {t('identity')}</div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>{t('childAvatar')}</label>
-            <div style={{ display:"flex", gap:8 }}>
-              {CHILD_AVATARS.map(a => (
-                <button key={a} onClick={() => setAvatar(a)} style={{ fontSize:"1.6rem", background: avatar===a?G.teal+"22":"rgba(255,255,255,0.04)", border:`2px solid ${avatar===a?G.teal:G.border}`, borderRadius:10, padding:"6px 10px", cursor:"pointer" }}>{a}</button>
-              ))}
-            </div>
-          </div>
-          <Input label={t('childFirstName') + " *"} value={firstName} onChange={setFirstName} placeholder="Emma" />
-          <Input label={t('birthDate')} type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('gender')}</label>
-            <select value={gender} onChange={e=>setGender(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
-              <option value="">{t('genderUnspecified')}</option>
-              <option value="fille">{t('genderGirl')}</option>
-              <option value="garcon">{t('genderBoy')}</option>
-            </select>
-          </div>
-          <Input label={t('bedtime')} type="time" value={bedtime} onChange={setBedtime} icon="🌙" />
-        </Card>
-
-        <Card style={{ borderColor:G.coral+"33" }}>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>{t('healthSafety')}</div>
-          <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:16 }}>{t('healthSafetySubtitle')}</div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.coral, marginBottom:6 }}>{t('allergies')}</label>
-            <textarea value={allergies} onChange={e=>setAllergies(e.target.value)} placeholder={t('allergiesPlaceholder')} style={{ width:"100%", background:"rgba(255,95,87,0.06)", border:`1.5px solid ${G.coral}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
-          </div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.amber, marginBottom:6 }}>{t('medications')}</label>
-            <textarea value={medications} onChange={e=>setMedications(e.target.value)} placeholder={t('medicationsPlaceholder')} style={{ width:"100%", background:"rgba(251,191,36,0.06)", border:`1.5px solid ${G.amber}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
-          </div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('medicalNotes')}</label>
-            <textarea value={medicalNotes} onChange={e=>setMedicalNotes(e.target.value)} placeholder={t('medicalNotesPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
-          </div>
-        </Card>
-
-        <Card>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('habits')}</div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('routines')}</label>
-            <textarea value={routines} onChange={e=>setRoutines(e.target.value)} placeholder={t('routinesPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:70 }} />
-          </div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('favoriteActivities')}</label>
-            <textarea value={favoriteActivities} onChange={e=>setFavoriteActivities(e.target.value)} placeholder={t('activitiesPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
-          </div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('fears')}</label>
-            <textarea value={fears} onChange={e=>setFears(e.target.value)} placeholder={t('fearsPlaceholder')} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
-          </div>
-        </Card>
-
-        <Card style={{ borderColor:G.green+"33" }}>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('emergencyContacts')}</div>
-          <Input label={t('doctorName')} value={doctorName} onChange={setDoctorName} placeholder="Dr. Martin" icon="🩺" />
-          <Input label={t('doctorPhone')} value={doctorPhone} onChange={setDoctorPhone} placeholder="+33 1 23 45 67 89" icon="📞" />
-          <div style={{ height:1, background:G.border, margin:"6px 0 16px" }} />
-          <Input label={t('emergencyContactName')} value={emergencyContactName} onChange={setEmergencyContactName} placeholder="Grand-mère Nicole" icon="👤" />
-          <Input label={t('emergencyContactPhone')} value={emergencyContactPhone} onChange={setEmergencyContactPhone} placeholder="+33 6 12 34 56 78" icon="📞" />
-        </Card>
-
-      </div>
-    </div>
-  );
-};
 // ─── PARENT PROFILE ───────────────────────────────────────────
 const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole }) => {
   const [saving, setSaving] = useState(false);

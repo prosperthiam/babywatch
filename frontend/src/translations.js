@@ -1,5 +1,16 @@
 export const translations = {
   fr: {
+    greetingDay: "Bonjour",
+greetingEvening: "Bonsoir",
+parentShort: "Parent",
+sitterShort: "Babysitter",
+noUpcomingTitle: "Aucune garde prévue",
+noUpcomingDesc: "Parcourez les babysitters vérifiées près de chez vous et réservez votre prochaine soirée.",
+bookingCancelled: "Réservation annulée.",
+missionAccepted: "Mission acceptée",
+missionDeclined: "Mission refusée.",
+reviewPublished: "Avis publié",
+
     otherRoleTitle: "Vous cherchez aussi à garder des enfants ?",
 otherRoleDesc: "Activez votre espace babysitter sur ce même compte. Vous pourrez basculer entre les deux espaces à tout moment, sans vous reconnecter.",
 otherRoleCta: "Activer mon second espace",
@@ -440,6 +451,17 @@ secureConnection: "Connexion sécurisée · RGPD",
   },
 
   en: {
+    greetingDay: "Hello",
+greetingEvening: "Good evening",
+parentShort: "Parent",
+sitterShort: "Babysitter",
+noUpcomingTitle: "No upcoming booking",
+noUpcomingDesc: "Browse verified babysitters near you and book your next evening out.",
+bookingCancelled: "Booking cancelled.",
+missionAccepted: "Mission accepted",
+missionDeclined: "Mission declined.",
+reviewPublished: "Review published",
+
     bookingCancelled: "Booking cancelled.",
 missionAccepted: "✅ Mission accepted!",
 missionDeclined: "Mission declined.",
@@ -892,6 +914,18 @@ secureConnection: "Secure connection · GDPR",
   },
 
   ar: {
+    greetingDay: "مرحباً",
+greetingEvening: "مساء الخير",
+parentShort: "ولي الأمر",
+sitterShort: "مربية",
+noUpcomingTitle: "لا توجد حجوزات قادمة",
+noUpcomingDesc: "تصفح المربيات الموثقات بالقرب منك واحجز أمسيتك القادمة.",
+bookingCancelled: "تم إلغاء الحجز.",
+missionAccepted: "تم قبول المهمة",
+missionDeclined: "تم رفض المهمة.",
+reviewPublished: "تم نشر التقييم",
+ 
+
     bookingCancelled: "تم إلغاء الحجز.",
 missionAccepted: "✅ تم قبول المهمة!",
 missionDeclined: "تم رفض المهمة.",
