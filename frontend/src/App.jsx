@@ -1023,6 +1023,239 @@ const ParentHome = ({ user, bookings, onNav, t = (k) => k }) => {
   );
 };
 
+const CHILD_AVATARS = ["👶","🧒","👦","👧","🍼","🧸"];
+
+const ChildrenManager = ({ showToast, t = (k) => k }) => {
+  const [children, setChildren] = useState([]);
+  const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const token = localStorage.getItem('token');
+
+  const load = () => {
+    fetch(`${API}/children`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { setChildren(Array.isArray(d)?d:[]); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+
+  useEffect(() => { if (token) load(); }, []);
+
+  const remove = async (id) => {
+    if (!confirm(t('confirmDeleteChild'))) return;
+    await fetch(`${API}/children/${id}`, { method:'DELETE', headers:{ 'Authorization':`Bearer ${token}` } });
+    setChildren(prev => prev.filter(c => c.id !== id));
+    showToast(t('childDeleted'), "err");
+  };
+
+  const age = (birthDate) => {
+    if (!birthDate) return null;
+    const diff = Date.now() - new Date(birthDate).getTime();
+    const years = Math.floor(diff / 31557600000);
+    if (years < 1) return `${Math.floor(diff / 2629800000)} mois`;
+    return `${years} an${years>1?'s':''}`;
+  };
+
+  if (editing !== null) return (
+    <ChildForm
+      child={editing}
+      onCancel={() => setEditing(null)}
+      onSaved={(saved) => {
+        setChildren(prev => editing.id ? prev.map(c => c.id===saved.id?saved:c) : [...prev, saved]);
+        setEditing(null);
+        showToast(t('childSaved'), "ok");
+      }}
+      showToast={showToast}
+      t={t}
+    />
+  );
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>{t('myChildren')}</div>
+<div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('childrenSubtitle')}</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('childrenSubtitle')}</div>
+        </div>
+       <Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
+      </div>
+
+      {loading && <div style={{ color:G.muted, textAlign:"center", padding:30 }}>Chargement…</div>}
+
+      {!loading && children.length === 0 && (
+        <Card style={{ textAlign:"center", padding:40 }}>
+          <div style={{ fontSize:"3rem", marginBottom:12 }}>👶</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:8 }}>{t('noChildren')}</div>
+<div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('childrenSubtitle')}</div>
+<Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
+        </Card>
+      )}
+
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:16 }}>
+        {children.map(c => (
+          <Card key={c.id}>
+            <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:14 }}>
+              <span style={{ fontSize:"2.5rem" }}>{c.avatar || "👶"}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"1.05rem" }}>{c.first_name}</div>
+                <div style={{ color:G.muted, fontSize:"0.78rem" }}>
+                  {age(c.birth_date) ? `🎂 ${age(c.birth_date)}` : ''}
+                  {c.bedtime ? ` · 🌙 ${c.bedtime.slice(0,5)}` : ''}
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={() => setEditing(c)} style={{ background:"rgba(255,255,255,0.06)", border:`1px solid ${G.border}`, color:G.text, borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:"0.75rem" }}>✏️</button>
+                <button onClick={() => remove(c.id)} style={{ background:"rgba(255,95,87,0.12)", border:"1px solid rgba(255,95,87,0.25)", color:G.coral, borderRadius:8, padding:"6px 10px", cursor:"pointer", fontSize:"0.75rem" }}>🗑</button>
+              </div>
+            </div>
+
+            {c.allergies && (
+              <div style={{ background:"rgba(255,95,87,0.1)", border:`1px solid ${G.coral}33`, borderRadius:8, padding:"8px 12px", marginBottom:8 }}>
+                <div style={{ color:G.coral, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>{t('allergies')}</div>
+                <div style={{ color:G.text, fontSize:"0.8rem" }}>{c.allergies}</div>
+              </div>
+            )}
+            {c.medications && (
+              <div style={{ background:"rgba(251,191,36,0.1)", border:`1px solid ${G.amber}33`, borderRadius:8, padding:"8px 12px", marginBottom:8 }}>
+                <div style={{ color:G.amber, fontSize:"0.7rem", fontWeight:700, marginBottom:2 }}>{t('medications')}</div>
+                <div style={{ color:G.text, fontSize:"0.8rem" }}>{c.medications}</div>
+              </div>
+            )}
+            {c.routines && (
+              <div style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.5, marginTop:6 }}>
+                <strong style={{ color:G.text }}>{t('routines')} :</strong> {c.routines}
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── CHILD FORM ───────────────────────────────────────────────
+const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
+  const [firstName, setFirstName] = useState(child.first_name || "");
+  const [birthDate, setBirthDate] = useState(child.birth_date?.slice(0,10) || "");
+  const [gender, setGender] = useState(child.gender || "");
+  const [avatar, setAvatar] = useState(child.avatar || "👶");
+  const [allergies, setAllergies] = useState(child.allergies || "");
+  const [medicalNotes, setMedicalNotes] = useState(child.medical_notes || "");
+  const [medications, setMedications] = useState(child.medications || "");
+  const [routines, setRoutines] = useState(child.routines || "");
+  const [favoriteActivities, setFavoriteActivities] = useState(child.favorite_activities || "");
+  const [fears, setFears] = useState(child.fears || "");
+  const [bedtime, setBedtime] = useState(child.bedtime?.slice(0,5) || "");
+  const [doctorName, setDoctorName] = useState(child.doctor_name || "");
+  const [doctorPhone, setDoctorPhone] = useState(child.doctor_phone || "");
+  const [emergencyContactName, setEmergencyContactName] = useState(child.emergency_contact_name || "");
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState(child.emergency_contact_phone || "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!firstName.trim()) { showToast(t('firstNameRequired'), "err"); return; }
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const body = { firstName, birthDate, gender, avatar, allergies, medicalNotes, medications,
+        routines, favoriteActivities, fears, bedtime, doctorName, doctorPhone,
+        emergencyContactName, emergencyContactPhone };
+      const res = await fetch(child.id ? `${API}/children/${child.id}` : `${API}/children`, {
+        method: child.id ? 'PUT' : 'POST',
+        headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) onSaved(data);
+      else showToast("❌ " + data.error, "err");
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
+    setSaving(false);
+  };
+
+  return (
+    <div>
+      <button onClick={onCancel} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.85rem", marginBottom:18 }}>{t('back')}</button>
+
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>
+          {child.id ? t('editChildForm') : t('newChildForm')}
+        </div>
+        <Btn onClick={save} variant="teal" disabled={saving}>{saving ? t('saving') : t('save')}</Btn>
+      </div>
+
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+
+        <Card>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>👶 {t('identity')}</div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:8 }}>{t('childAvatar')}</label>
+            <div style={{ display:"flex", gap:8 }}>
+              {CHILD_AVATARS.map(a => (
+                <button key={a} onClick={() => setAvatar(a)} style={{ fontSize:"1.6rem", background: avatar===a?G.teal+"22":"rgba(255,255,255,0.04)", border:`2px solid ${avatar===a?G.teal:G.border}`, borderRadius:10, padding:"6px 10px", cursor:"pointer" }}>{a}</button>
+              ))}
+            </div>
+          </div>
+          <Input label={t('childFirstName') + " *"} value={firstName} onChange={setFirstName} placeholder="Emma" />
+          <Input label={t('birthDate')} type="date" value={birthDate} onChange={setBirthDate} icon="🎂" />
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('gender')}</label>
+            <select value={gender} onChange={e=>setGender(e.target.value)} style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}>
+              <option value="">{t('genderUnspecified')}</option>
+              <option value="fille">{t('genderGirl')}</option>
+              <option value="garcon">{t('genderBoy')}</option>
+            </select>
+          </div>
+          <Input label={t('bedtime')} type="time" value={bedtime} onChange={setBedtime} icon="🌙" />
+        </Card>
+
+        <Card style={{ borderColor:G.coral+"33" }}>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>{t('healthSafety')}</div>
+          <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:16 }}>{t('healthSafetySubtitle')}</div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.coral, marginBottom:6 }}>{t('allergies')}</label>
+            <textarea value={allergies} onChange={e=>setAllergies(e.target.value)} placeholder="Arachides, lactose, pollen…" style={{ width:"100%", background:"rgba(255,95,87,0.06)", border:`1.5px solid ${G.coral}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.amber, marginBottom:6 }}>{t('medications')}</label>
+            <textarea value={medications} onChange={e=>setMedications(e.target.value)} placeholder="Ventoline si toux · 1 dose max" style={{ width:"100%", background:"rgba(251,191,36,0.06)", border:`1.5px solid ${G.amber}33`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('medicalNotes')}</label>
+            <textarea value={medicalNotes} onChange={e=>setMedicalNotes(e.target.value)} placeholder="Asthme léger, port de lunettes…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+        </Card>
+
+        <Card>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('habits')}</div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('routines')}</label>
+            <textarea value={routines} onChange={e=>setRoutines(e.target.value)} placeholder="Biberon à 19h, histoire avant de dormir, veilleuse allumée…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:70 }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('favoriteActivities')}</label>
+            <textarea value={favoriteActivities} onChange={e=>setFavoriteActivities(e.target.value)} placeholder="Dessin, puzzles, jouer dehors…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ display:"block", fontSize:"0.78rem", fontWeight:600, color:G.muted, marginBottom:6 }}>{t('fears')}</label>
+            <textarea value={fears} onChange={e=>setFears(e.target.value)} placeholder="Peur du noir, n'aime pas les chiens…" style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 14px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", resize:"vertical", minHeight:60 }} />
+          </div>
+        </Card>
+
+        <Card style={{ borderColor:G.green+"33" }}>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:16 }}>{t('emergencyContacts')}</div>
+          <Input label={t('doctorName')} value={doctorName} onChange={setDoctorName} placeholder="Dr. Martin" icon="🩺" />
+          <Input label={t('doctorPhone')} value={doctorPhone} onChange={setDoctorPhone} placeholder="+33 1 23 45 67 89" icon="📞" />
+          <div style={{ height:1, background:G.border, margin:"6px 0 16px" }} />
+          <Input label={t('emergencyContactName')} value={emergencyContactName} onChange={setEmergencyContactName} placeholder="Grand-mère Nicole" icon="👤" />
+          <Input label={t('emergencyContactPhone')} value={emergencyContactPhone} onChange={setEmergencyContactPhone} placeholder="+33 6 12 34 56 78" icon="📞" />
+        </Card>
+
+      </div>
+    </div>
+  );
+};
+// ─── PARENT PROFILE ───────────────────────────────────────────
+
 // ─── PARENT PROFILE ───────────────────────────────────────────
 const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole }) => {
   const [saving, setSaving] = useState(false);
