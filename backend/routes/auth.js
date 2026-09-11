@@ -11,7 +11,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ── INSCRIPTION ──
 router.post('/register', async (req, res) => {
-  const { email, password, role, firstName, lastName } = req.body;
+  const { email, password, role, firstName, lastName, consentAccepted } = req.body;
+
+  // Preuve de consentement — obligatoire (RGPD art. 7.1)
+  if (!consentAccepted) {
+    return res.status(400).json({ error: 'Vous devez accepter les conditions d\'utilisation et la politique de confidentialité.' });
+  }
   try {
     // Vérifier si email existe déjà
     const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
@@ -20,11 +25,11 @@ router.post('/register', async (req, res) => {
     }
 
     const hash = await bcrypt.hash(password, 10);
-    const result = await pool.query(
-      `INSERT INTO users (email, password, role, first_name, last_name, verified, is_parent, is_sitter)
-       VALUES ($1, $2, $3, $4, $5, false, $6, $7)
+        const result = await pool.query(
+      `INSERT INTO users (email, password, role, first_name, last_name, verified, is_parent, is_sitter, consent_accepted_at, consent_version)
+       VALUES ($1, $2, $3, $4, $5, false, $6, $7, NOW(), $8)
        RETURNING id, email, role, first_name, last_name`,
-      [email, hash, role, firstName, lastName, role === 'parent', role === 'sitter']
+      [email, hash, role, firstName, lastName, role === 'parent', role === 'sitter', '2026-09-11']
     );
     const user = result.rows[0];
 

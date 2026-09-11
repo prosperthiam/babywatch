@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, Component } from "react";
 // v2.1 - fix sitter profile
 import { translations, useTranslation } from './translations.js';
+import LegalPage from './LegalPage.jsx';
 const API = 'https://babywatch-production.up.railway.app/api';
 
 
@@ -407,6 +408,7 @@ const AuthPage = ({ onLogin, t = (k) => k, onBackToLanding }) => {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [consent, setConsent] = useState(false);
  const [show2FA, setShow2FA] = useState(false);
 const [twoFAUserId, setTwoFAUserId] = useState(null);
 
@@ -445,13 +447,14 @@ if (show2FA) return (
   const handleRegister = async () => {
     if (!name || !email || !password) { setError(t('authFillFields')); return; }
     if (password.length < 6) { setError(t('authPasswordTooShort')); return; }
+    if (!consent) { setError(t('consentRequired')); return; }
     try {
       const [firstName, ...rest] = name.split(' ');
       const lastName = rest.join(' ') || '';
       const res = await fetch(`${API}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, role, firstName, lastName })
+        body: JSON.stringify({ email, password, role, firstName, lastName, consentAccepted: true })
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error); return; }
@@ -534,9 +537,26 @@ if (show2FA) return (
 
           {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
 
+          {mode === "register" && (
+            <label style={{ display:"flex", alignItems:"flex-start", gap:10, marginBottom:16, cursor:"pointer" }}>
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={e => setConsent(e.target.checked)}
+                style={{ marginTop:3, width:16, height:16, accentColor:G.teal, cursor:"pointer", flexShrink:0 }}
+              />
+              <span style={{ fontSize:"0.78rem", color:G.muted, lineHeight:1.55 }}>
+                {t('consentPrefix')}{" "}
+                <a href="/cgu" target="_blank" rel="noreferrer" style={{ color:G.teal }}>{t('footerTerms')}</a>
+                {" "}{t('consentAnd')}{" "}
+                <a href="/confidentialite" target="_blank" rel="noreferrer" style={{ color:G.teal }}>{t('footerPrivacy')}</a>.
+              </span>
+            </label>
+          )}
+
           {mode === "login"
             ? <Btn onClick={handleLogin} variant="teal" size="lg" full>{t('loginBtn')}</Btn>
-            : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full>{t('createAccount')}</Btn>
+            : <Btn onClick={handleRegister} variant={role==="sitter"?"amber":"teal"} size="lg" full disabled={!consent}>{t('createAccount')}</Btn>
           }
 
           {mode === "login" && (
@@ -750,8 +770,12 @@ const LandingPage = ({ onStart, onLogin, lang, onLangChange, t = (k) => k }) => 
             🍼 BabyWatch · {t('footerRights')}
           </div>
           <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
-            {[t('footerTerms'), t('footerPrivacy'), t('footerContact')].map(l => (
-              <span key={l} style={{ color:G.muted, fontSize:"0.82rem", cursor:"pointer" }}>{l}</span>
+            {[
+              [t('footerTerms'),   "/cgu"],
+              [t('footerPrivacy'), "/confidentialite"],
+              [t('footerLegal'),   "/mentions-legales"],
+            ].map(([label, href]) => (
+              <a key={href} href={href} style={{ color:G.muted, fontSize:"0.82rem", textDecoration:"none" }}>{label}</a>
             ))}
           </div>
         </div>
@@ -3600,8 +3624,18 @@ export default function App() {
     } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
   };
 
+  const legalPath = window.location.pathname;
+  const legalDoc =
+    legalPath === "/confidentialite"  ? "privacy" :
+    legalPath === "/cgu"              ? "terms"   :
+    legalPath === "/mentions-legales" ? "legal"   : null;
+
   const isConfirmPage = window.location.pathname === "/confirm" || (window.location.search.includes("token=") && !window.location.pathname.includes("reset"));
   const isResetPage   = window.location.pathname === "/reset-password" || (window.location.search.includes("token=") && window.location.pathname.includes("reset"));
+
+  if (legalDoc) return (
+    <LegalPage doc={legalDoc} onBack={() => { window.location.href = "/"; }} />
+  );
 
   if (isConfirmPage) return (
     <>

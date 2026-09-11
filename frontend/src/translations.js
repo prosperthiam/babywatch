@@ -1,5 +1,11 @@
 export const translations = {
   fr: {
+
+consentPrefix: "J'ai lu et j'accepte les",
+consentAnd: "et la",
+consentRequired: "Vous devez accepter les conditions pour créer un compte.",
+footerLegal: "Mentions légales",
+
     greetingDay: "Bonjour",
 greetingEvening: "Bonsoir",
 parentShort: "Parent",
@@ -509,6 +515,11 @@ secureConnection: "Connexion sécurisée · RGPD",
   },
 
   en: {
+    consentPrefix: "I have read and accept the",
+consentAnd: "and the",
+consentRequired: "You must accept the terms to create an account.",
+footerLegal: "Legal notice",
+
     greetingDay: "Hello",
 greetingEvening: "Good evening",
 parentShort: "Parent",
@@ -1020,6 +1031,11 @@ secureConnection: "Secure connection · GDPR",
   },
 
   ar: {
+    consentPrefix: "لقد قرأت وأوافق على",
+consentAnd: "و",
+consentRequired: "يجب الموافقة على الشروط لإنشاء حساب.",
+footerLegal: "الإشعارات القانونية",
+
     greetingDay: "مرحباً",
 greetingEvening: "مساء الخير",
 parentShort: "ولي الأمر",
