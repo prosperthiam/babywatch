@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-11T00:00:00.000Z",
+  "title": "Design System: BabyWatch",
+  "extensions": {
+    "colorMeta": {
+      "deep-night-navy": { "role": "neutral", "displayName": "Deep Night Navy", "canonical": "#0f1923", "tonalRamp": ["#0b0e13", "#0d1219", "#0e151e", "#0f1923", "#4a5159", "#858a90", "#bfc2c6", "#fafafc"] },
+      "slate-panel-navy": { "role": "neutral", "displayName": "Slate Panel Navy", "canonical": "#162030", "tonalRamp": ["#0d1017", "#10151f", "#131b28", "#162030", "#4f5763", "#888d96", "#c1c4c9", "#fafafc"] },
+      "dusk-card-navy": { "role": "neutral", "displayName": "Dusk Card Navy", "canonical": "#1e2d40", "tonalRamp": ["#0f131b", "#141c27", "#192434", "#1e2d40", "#55606f", "#8c949e", "#c3c7cd", "#fafafc"] },
+      "sunken-well": { "role": "neutral", "displayName": "Sunken Well", "canonical": "#0c141d", "tonalRamp": ["#0b0d12", "#0b0f16", "#0c1219", "#0c141d", "#484e55", "#83878d", "#bfc1c4", "#fafafc"] },
+      "signal-teal": { "role": "primary", "displayName": "Signal Teal", "canonical": "#2dd4bf", "tonalRamp": ["#133d3a", "#1c6f67", "#24a293", "#2dd4bf", "#60dece", "#94e7de", "#c7f1ed", "#fafafc"] },
+      "watch-amber": { "role": "secondary", "displayName": "Watch Amber", "canonical": "#fbbf24", "tonalRamp": ["#463714", "#836519", "#bf921f", "#fbbf24", "#fbce5a", "#fbdd90", "#faebc6", "#fafafc"] },
+      "verified-green": { "role": "status", "displayName": "Verified Green", "canonical": "#4ade80", "tonalRamp": ["#1a3f2b", "#2a7447", "#3aa964", "#4ade80", "#76e59f", "#a2ecbe", "#cef3dd", "#fafafc"] },
+      "alert-coral": { "role": "status", "displayName": "Alert Coral", "canonical": "#ff5f57", "tonalRamp": ["#471f20", "#853533", "#c24a45", "#ff5f57", "#fe8680", "#fdadaa", "#fbd3d3", "#fafafc"] },
+      "muted-lavender": { "role": "tertiary", "displayName": "Muted Lavender", "canonical": "#a78bfa", "tonalRamp": ["#312a49", "#594b84", "#806bbf", "#a78bfa", "#bca7fb", "#d1c3fb", "#e5defc", "#fafafc"] },
+      "soft-white": { "role": "neutral", "displayName": "Soft White", "canonical": "#e8edf4", "tonalRamp": ["#424348", "#797c81", "#b1b4bb", "#e8edf4", "#edf0f6", "#f1f4f8", "#f6f7fa", "#fafafc"] },
+      "fog-gray": { "role": "neutral", "displayName": "Fog Gray", "canonical": "#8b9bb0", "tonalRamp": ["#2a2e37", "#4b535f", "#6b7788", "#8b9bb0", "#a7b3c3", "#c3cbd6", "#dee2e9", "#fafafc"] },
+      "faint-slate": { "role": "neutral", "displayName": "Faint Slate", "canonical": "#5d6b7d", "tonalRamp": ["#1f222a", "#343b46", "#485361", "#5d6b7d", "#848f9d", "#acb3bd", "#d3d6dc", "#fafafc"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "In-app section/page headings. Landing-page hero headings use larger one-off sizes outside this scale." },
+      "title": { "displayName": "Title", "purpose": "Card and modal titles, sub-section headers." },
+      "section": { "displayName": "Section", "purpose": "Small structural labels." },
+      "body": { "displayName": "Body", "purpose": "Default reading text and form copy." },
+      "meta": { "displayName": "Meta", "purpose": "Secondary/supporting text — timestamps, counts, helper text." },
+      "micro": { "displayName": "Micro", "purpose": "Smallest tier — pill labels, badges, compact tab captions." }
+    },
+    "shadows": [
+      { "name": "modal-lift", "value": "0 24px 80px rgba(0,0,0,0.5)", "purpose": "The only elevation role: modals and dialogs lifting above the page." },
+      { "name": "toast-lift", "value": "0 8px 32px rgba(0,0,0,0.4)", "purpose": "Lighter lift for the transient toast notification." }
+    ],
+    "motion": [
+      { "name": "control-transition", "value": "all 0.18s", "purpose": "Default transition for buttons and interactive controls." },
+      { "name": "toast-ease", "value": "0.32s cubic-bezier(0.175,0.885,0.32,1.275)", "purpose": "Toast enter/exit motion — the system's one expressive easing curve." },
+      { "name": "live-pulse", "value": "bw-pulse 1.5s ease-in-out infinite", "purpose": "Pulsing ring on live/active status dots." }
+    ],
+    "breakpoints": [
+      { "name": "mobile", "value": "860px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Default call-to-action — teal fill, dark text.",
+      "html": "<button class=\"ds-btn-primary\">Confirmer la réservation</button>",
+      "css": ".ds-btn-primary { display:inline-flex; align-items:center; justify-content:center; gap:6px; background:#2dd4bf; color:#0f1923; border:none; border-radius:10px; padding:10px 20px; font-family:'Nunito',sans-serif; font-weight:800; font-size:0.88rem; cursor:pointer; transition:all 0.18s; } .ds-btn-primary:hover { transform:translateY(-1px); filter:brightness(1.05); } .ds-btn-primary:focus-visible { outline:3px solid #2dd4bf; outline-offset:3px; } .ds-btn-primary:disabled { opacity:0.4; cursor:not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary/low-emphasis action.",
+      "html": "<button class=\"ds-btn-ghost\">Annuler</button>",
+      "css": ".ds-btn-ghost { display:inline-flex; align-items:center; justify-content:center; gap:6px; background:rgba(255,255,255,0.06); color:#e8edf4; border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:10px 20px; font-family:'Nunito',sans-serif; font-weight:800; font-size:0.88rem; cursor:pointer; transition:all 0.18s; } .ds-btn-ghost:hover { background:rgba(255,255,255,0.1); } .ds-btn-ghost:focus-visible { outline:3px solid #2dd4bf; outline-offset:3px; }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "badge-status",
+      "description": "Tinted pill for status/role — the system's one decorative device (shown here in the verified-green variant).",
+      "html": "<span class=\"ds-badge\">Vérifiée</span>",
+      "css": ".ds-badge { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:100px; font-size:0.7rem; font-weight:700; font-family:'Inter',sans-serif; background:#4ade8022; color:#4ade80; border:1px solid #4ade8044; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Default content surface — one tone above the app background.",
+      "html": "<div class=\"ds-card\">Prochaine garde — Samedi 19h</div>",
+      "css": ".ds-card { background:#1e2d40; border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:20px 22px; color:#e8edf4; font-family:'Inter',sans-serif; font-size:0.875rem; line-height:1.6; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Sunken-feel field with teal focus glow.",
+      "html": "<input class=\"ds-input\" type=\"email\" placeholder=\"vous@email.fr\" />",
+      "css": ".ds-input { width:100%; background:rgba(255,255,255,0.05); border:1.5px solid rgba(255,255,255,0.07); border-radius:10px; padding:10px 14px; color:#e8edf4; font-family:'Inter',sans-serif; font-size:0.88rem; outline:none; } .ds-input:focus { border-color:#2dd4bf; box-shadow:0 0 0 3px #2dd4bf22; }"
+    },
+    {
+      "name": "Role Accent Tab",
+      "kind": "nav",
+      "refersTo": "nav-tab",
+      "description": "Active/inactive navigation tab; icon and label pick up the current role's accent color when active (teal shown here for parent).",
+      "html": "<button class=\"ds-tab ds-tab--active\"><span class=\"ds-tab-icon\">●</span>Réservations</button>",
+      "css": ".ds-tab { display:flex; align-items:center; gap:7px; padding:7px 12px; border-radius:8px; border:none; background:transparent; color:#8b9bb0; font-family:'Inter',sans-serif; font-size:0.78rem; line-height:1.5; font-weight:400; cursor:pointer; transition:color .15s, background .15s; } .ds-tab--active { background:rgba(255,255,255,0.06); color:#fff; font-weight:600; } .ds-tab--active .ds-tab-icon { color:#2dd4bf; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Night Watch",
+    "overview": "BabyWatch is used in the evening, on a phone, often one-handed — a parent checking a booking, glancing at a live feed, or messaging a sitter before bed. The interface reads as a calm, dim control surface built for that moment: a dark-navy console you can trust in low light, not a bright consumer app you browse in daylight. Warmth comes from clarity — legible information, correct states, honest empty states — never from decoration. The subject matter (children, allergies, medication, emergency contacts) rules out anything cute or playful; the small scale of the product today (a handful of real users, not thousands) rules out any dashboard bravado.\n\nTwo explicit anti-references keep this system honest: it must not read as a \"young parents\" app (pastels, balloons, child illustrations, bubbly rounded type), and it must not read as an infrastructure/ops dashboard (dense, purely operational, cold). The intended register sits closer to Doctolib or Qonto's sobriety than to Airbnb's warmth — trustworthy through precision, not through friendliness.",
+    "keyCharacteristics": [
+      "Near-black navy surfaces layered by tone, not by shadow",
+      "One functional accent per role — teal for parent, amber for sitter — used sparingly, never decoratively",
+      "Bold rounded-sans (Nunito) for structure and headings, neutral humanist-sans (Inter) for reading and data",
+      "Flat by default; heavy shadow reserved strictly for modals lifting above the page",
+      "Custom stroke-based SVG icon set for all functional/navigational icons — no emoji in that role",
+      "Bilingual (FR/AR) with full RTL support; layouts must hold up mirrored"
+    ],
+    "rules": [
+      { "name": "The Role Accent Rule", "body": "Teal marks parent-context UI, amber marks sitter-context UI, everywhere — tabs, buttons, badges, role switchers. This mapping is binding; any exception is a bug, not a variant.", "section": "colors" },
+      { "name": "The Restraint Rule", "body": "Warmth and trust come from clarity, not from decoration. Do not introduce new saturated colors, brighter accents, or larger color fills to make a screen feel friendlier. If a screen feels cold, fix it with better copy and hierarchy, not more color.", "section": "colors" },
+      { "name": "The Two-Voice Rule", "body": "Nunito is structural (headings, buttons, tab labels, brand); Inter is everything read at length. Don't use Nunito for paragraph text or Inter for a primary CTA label.", "section": "typography" },
+      { "name": "The Evening Thumb Rule", "body": "Primary actions on mobile screens belong within comfortable one-handed thumb reach; don't place a screen's primary CTA only at the very top of a tall scrolling view.", "section": "layout" },
+      { "name": "The Modal-Only Shadow Rule", "body": "If it's not a modal, dialog, toast, or the landing page's camera-frame visual, it doesn't get a shadow — use layering + border instead.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep teal strictly on parent-context UI and amber strictly on sitter-context UI (The Role Accent Rule).",
+      "Do use tonal layering (night → panel → card → sunk) plus hairline borders for depth; reserve shadow for modals, dialogs, and toasts only.",
+      "Do use the custom SVG stroke-icon set for anything functional/navigational.",
+      "Do verify any new layout against the RTL (Arabic) flip.",
+      "Do keep Fog Gray (#8b9bb0) exactly as specified for secondary text; it was tuned for contrast on these dark surfaces.",
+      "Do let empty states stay genuinely empty."
+    ],
+    "donts": [
+      "Don't add pastel colors, illustrated children, balloons, or bubbly/rounded-beyond-current-scale shapes to \"warm up\" a screen.",
+      "Don't go cold/infrastructure-dashboard either — a parent is entrusting a child, not monitoring a server.",
+      "Don't use emoji as functional or navigational icons.",
+      "Don't add a shadow to an at-rest surface (cards, panels, nav).",
+      "Don't fabricate scale or social proof (counters, testimonials, ratings) in any component."
+    ]
+  }
+}
