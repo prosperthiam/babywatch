@@ -43,6 +43,9 @@ const TY = {
 // Rayons — 3 valeurs au lieu de 11
 const R = { sm:8, md:12, lg:16, pill:100 };
 
+// Locale BCP-47 pour Intl/toLocaleDateString selon la langue active
+const LOCALE_MAP = { fr:"fr-FR", en:"en-US", ar:"ar" };
+
 // ── Icônes SVG (remplacent les emoji de navigation) ──
 const Icon = ({ name, size = 18, color = "currentColor", style = {} }) => {
   const paths = {
@@ -181,7 +184,7 @@ const ConfirmPage = ({ onLogin, t = (k) => k }) => {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
-    if (!token) { setStatus("error"); setMessage("Token manquant."); return; }
+    if (!token) { setStatus("error"); setMessage(t('confirmTokenMissing')); return; }
     fetch(`${API}/auth/confirm/${token}`)
       .then(r => r.json())
       .then(data => {
@@ -191,10 +194,10 @@ const ConfirmPage = ({ onLogin, t = (k) => k }) => {
           setTimeout(() => onLogin(data.user), 2000);
         } else {
           setStatus("error");
-          setMessage(data.error || "Lien invalide.");
+          setMessage(data.error || t('confirmInvalidLink'));
         }
       })
-      .catch(() => { setStatus("error"); setMessage("Erreur de connexion."); });
+      .catch(() => { setStatus("error"); setMessage(t('connectionError')); });
   }, []);
 
   return (
@@ -204,16 +207,16 @@ const ConfirmPage = ({ onLogin, t = (k) => k }) => {
           {status === "loading" ? "⏳" : status === "success" ? "🎉" : "❌"}
         </div>
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:12 }}>
-          {status === "loading" ? "Vérification en cours…" : status === "success" ? "Compte confirmé !" : "Erreur"}
+          {status === "loading" ? t('confirmVerifying') : status === "success" ? t('confirmSuccessTitle') : t('error')}
         </div>
         <div style={{ color:G.muted, fontSize:"0.9rem" }}>
-          {status === "loading" ? "Patientez quelques secondes…"
-           : status === "success" ? "Redirection vers votre tableau de bord…"
+          {status === "loading" ? t('confirmWait')
+           : status === "success" ? t('confirmRedirecting')
            : message}
         </div>
         {status === "error" && (
           <button onClick={() => window.location.href = "/"} style={{ marginTop:20, background:G.teal, color:"#0f1923", border:"none", borderRadius:10, padding:"12px 24px", fontFamily:"'Nunito',sans-serif", fontWeight:800, cursor:"pointer" }}>
-            Retour à l'accueil
+            {t('backToHome')}
           </button>
         )}
       </div>
@@ -228,7 +231,7 @@ const ForgotPasswordPage = ({ onBack, t = (k) => k }) => {
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!email) { setError("Entrez votre email."); return; }
+    if (!email) { setError(t('forgotPwEnterEmail')); return; }
     try {
       const res = await fetch(`${API}/auth/forgot-password`, {
         method: 'POST',
@@ -239,7 +242,7 @@ const ForgotPasswordPage = ({ onBack, t = (k) => k }) => {
       if (!res.ok) { setError(data.error); return; }
       setStatus("sent");
     } catch(e) {
-      setError("Erreur de connexion au serveur.");
+      setError(t('serverConnectionError'));
     }
   };
 
@@ -249,7 +252,7 @@ const ForgotPasswordPage = ({ onBack, t = (k) => k }) => {
         <div style={{ padding:"28px" }}>
           {status === "form" ? (
             <>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>🔑 Mot de passe oublié</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>🔑 {t('forgotPwTitle')}</div>
               <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('forgotPwSubtitle')}</div>
               <Input label={t('email')} type="email" value={email} onChange={setEmail} placeholder="vous@email.fr" icon="✉️" />
               {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
@@ -279,9 +282,9 @@ const ResetPasswordPage = ({ onBack, t = (k) => k }) => {
   const token = new URLSearchParams(window.location.search).get("token");
 
   const handleSubmit = async () => {
-    if (!password || !confirm) { setError("Remplissez tous les champs."); return; }
-    if (password.length < 6) { setError("Mot de passe trop court."); return; }
-    if (password !== confirm) { setError("Les mots de passe ne correspondent pas."); return; }
+    if (!password || !confirm) { setError(t('authFillFields')); return; }
+    if (password.length < 6) { setError(t('authPasswordTooShort')); return; }
+    if (password !== confirm) { setError(t('resetPwMismatch')); return; }
     try {
       const res = await fetch(`${API}/auth/reset-password`, {
         method: 'POST',
@@ -292,7 +295,7 @@ const ResetPasswordPage = ({ onBack, t = (k) => k }) => {
       if (!res.ok) { setError(data.error); return; }
       setStatus("done");
     } catch(e) {
-      setError("Erreur de connexion au serveur.");
+      setError(t('serverConnectionError'));
     }
   };
 
@@ -302,7 +305,7 @@ const ResetPasswordPage = ({ onBack, t = (k) => k }) => {
         <div style={{ padding:"28px" }}>
           {status === "form" ? (
             <>
-              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>🔑 Nouveau mot de passe</div>
+              <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>🔑 {t('resetPwTitle')}</div>
               <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:20 }}>{t('chooseNewPw')}</div>
               <Input label={t('newPassword')} type="password" value={password} onChange={setPassword} placeholder="••••••••" icon="🔒" />
               <Input label={t('confirmPassword')} type="password" value={confirm} onChange={setConfirm} placeholder="••••••••" icon="🔒" />
@@ -331,7 +334,7 @@ const TwoFactorPage = ({ userId, onSuccess, onBack, t = (k) => k }) => {
   const [resending, setResending] = useState(false);
 
   const handleVerify = async () => {
-    if (code.length !== 6) { setError("Entrez le code à 6 chiffres."); return; }
+    if (code.length !== 6) { setError(t('twoFAEnterCode')); return; }
     setLoading(true); setError("");
     try {
       const res = await fetch(`${API}/auth/verify-2fa`, {
@@ -346,7 +349,7 @@ const TwoFactorPage = ({ userId, onSuccess, onBack, t = (k) => k }) => {
       } else {
         setError(data.error);
       }
-    } catch(e) { setError("Erreur de connexion."); }
+    } catch(e) { setError(t('connectionError')); }
     setLoading(false);
   };
 
@@ -358,7 +361,7 @@ const TwoFactorPage = ({ userId, onSuccess, onBack, t = (k) => k }) => {
             <div style={{ fontSize:"3rem", marginBottom:12 }}>🔐</div>
             <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:8 }}>{t('twoStepVerification')}</div>
             <div style={{ color:G.muted, fontSize:"0.85rem", lineHeight:1.6 }}>
-              Un code à 6 chiffres a été envoyé à votre email. Entrez-le ci-dessous.
+              {t('twoFACodeSentDesc')}
             </div>
           </div>
 
@@ -376,17 +379,17 @@ const TwoFactorPage = ({ userId, onSuccess, onBack, t = (k) => k }) => {
           {error && <div style={{ background:"#ef444420", border:"1px solid #ef444444", borderRadius:8, padding:"10px 14px", color:"#f87171", fontSize:"0.8rem", marginBottom:14 }}>⚠️ {error}</div>}
 
           <Btn onClick={handleVerify} variant="teal" size="lg" full disabled={loading||code.length!==6}>
-            {loading ? "Vérification…" : "✅ Vérifier →"}
+            {loading ? t('twoFAVerifying') : t('twoFAVerifyBtn')}
           </Btn>
 
           <div style={{ display:"flex", justifyContent:"space-between", marginTop:16 }}>
-            <button onClick={onBack} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem" }}>← Retour</button>
+            <button onClick={onBack} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer", fontSize:"0.82rem" }}>{t('back')}</button>
             <button onClick={async () => {
               setResending(true);
               // Renvoyer le code en relançant la connexion
               setTimeout(() => setResending(false), 3000);
             }} style={{ background:"none", border:"none", color:G.teal, cursor:"pointer", fontSize:"0.82rem", fontWeight:600 }}>
-              {resending ? "Envoyé ✓" : "Renvoyer le code"}
+              {resending ? t('twoFAResendSent') : t('twoFAResend')}
             </button>
           </div>
         </div>
@@ -427,7 +430,7 @@ const handleLogin = async () => {
 
     localStorage.setItem('token', data.token);
     onLogin(data.user);
-  } catch(e) { setError("Erreur de connexion au serveur."); }
+  } catch(e) { setError(t('serverConnectionError')); }
 };
 
 if (show2FA) return (
@@ -440,8 +443,8 @@ if (show2FA) return (
 );
 
   const handleRegister = async () => {
-    if (!name || !email || !password) { setError("Remplissez tous les champs."); return; }
-    if (password.length < 6) { setError("Mot de passe trop court."); return; }
+    if (!name || !email || !password) { setError(t('authFillFields')); return; }
+    if (password.length < 6) { setError(t('authPasswordTooShort')); return; }
     try {
       const [firstName, ...rest] = name.split(' ');
       const lastName = rest.join(' ') || '';
@@ -456,7 +459,7 @@ if (show2FA) return (
       setSuccessMsg(data.message);
       setMode("success");
     } catch(e) {
-      setError("Erreur de connexion au serveur.");
+      setError(t('serverConnectionError'));
     }
   };
 
@@ -469,18 +472,18 @@ if (show2FA) return (
         <div style={{ fontSize:"3rem", marginBottom:16 }}>📧</div>
         <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.4rem", color:"#fff", marginBottom:12 }}>{t('checkYourEmail')}</div>
         <div style={{ color:G.muted, fontSize:"0.9rem", marginBottom:24, lineHeight:1.6 }}>
-          Un email de confirmation a été envoyé à<br />
+          {t('authEmailSentTo')}<br />
           <strong style={{ color:G.teal }}>{email}</strong>
         </div>
         <div style={{ background:G.card, borderRadius:12, padding:"16px", marginBottom:24, border:`1px solid ${G.border}` }}>
           <div style={{ fontSize:"0.82rem", color:G.muted, lineHeight:1.7 }}>
-            📬 Ouvrez votre boîte mail<br />
-            🔗 Cliquez sur le lien de confirmation<br />
-            ✅ Votre compte sera activé automatiquement
+            📬 {t('authStepCheckInbox')}<br />
+            🔗 {t('authStepClickLink')}<br />
+            ✅ {t('authStepAutoActivate')}
           </div>
         </div>
         <button onClick={() => setMode("login")} style={{ background:"none", border:`1px solid ${G.border}`, color:G.muted, padding:"10px 20px", borderRadius:10, cursor:"pointer", fontFamily:"'Nunito',sans-serif", fontWeight:700, fontSize:"0.85rem" }}>
-          ← Retour à la connexion
+          {t('backToLogin')}
         </button>
       </div>
     </div>
@@ -508,7 +511,7 @@ if (show2FA) return (
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", borderBottom:`1px solid ${G.border}` }}>
           {["login","register"].map(m => (
             <button key={m} onClick={() => { setMode(m); setError(""); }} style={{ padding:"14px", background: mode===m ? G.card : "transparent", color: mode===m ? G.text : G.muted, border:"none", fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"0.88rem", cursor:"pointer", borderBottom: mode===m ? `2px solid ${G.teal}` : "2px solid transparent" }}>
-              {m === "login" ? "Se connecter" : "Créer un compte"}
+              {m === "login" ? t('login') : t('register')}
             </button>
           ))}
         </div>
@@ -519,7 +522,7 @@ if (show2FA) return (
               {["parent","sitter"].map(r => (
                 <button key={r} onClick={() => setRole(r)} style={{ padding:"12px 8px", borderRadius:10, border:`2px solid ${role===r?(r==="parent"?G.teal:G.amber):G.border}`, background: role===r?(r==="parent"?G.teal+"22":G.amber+"22"):"transparent", color: role===r?(r==="parent"?G.teal:G.amber):G.muted, fontFamily:"'Nunito',sans-serif", fontWeight:800, fontSize:"0.85rem", cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:5 }}>
                   <span style={{ fontSize:"1.5rem" }}>{r === "parent" ? "👨‍👧" : "👩"}</span>
-                  {r === "parent" ? "Parent" : "Babysitter"}
+                  {r === "parent" ? t('parentShort') : t('sitterShort')}
                 </button>
               ))}
             </div>
@@ -1074,7 +1077,6 @@ const ChildrenManager = ({ showToast, t = (k) => k }) => {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
           <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>{t('myChildren')}</div>
-<div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('childrenSubtitle')}</div>
           <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('childrenSubtitle')}</div>
         </div>
        <Btn onClick={() => setEditing({})} variant="teal">{t('addChild')}</Btn>
@@ -1254,8 +1256,6 @@ const ChildForm = ({ child, onCancel, onSaved, showToast, t = (k) => k }) => {
     </div>
   );
 };
-// ─── PARENT PROFILE ───────────────────────────────────────────
-
 // ─── PARENT PROFILE ───────────────────────────────────────────
 const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole }) => {
   const [saving, setSaving] = useState(false);
@@ -1445,7 +1445,7 @@ const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole })
 };
 
 // ─── SEARCH ───────────────────────────────────────────────────
-  const SearchSitters = ({ onBook, showToast, t = (k) => k }) => {
+const SearchSitters = ({ onBook, showToast, t = (k) => k }) => {
   const [search, setSearch] = useState("");
   const [filterCam, setFilterCam] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -1510,7 +1510,7 @@ const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole })
     (!filterCam || s.camera)
   );
 
-  if (selected) return <BookingForm sitter={selected} onBack={() => setSelected(null)} onConfirm={(b) => { onBook(b); setSelected(null); showToast("🎉 Demande envoyée !", "ok"); }} t={t} />;
+  if (selected) return <BookingForm sitter={selected} onBack={() => setSelected(null)} onConfirm={(b) => { onBook(b); setSelected(null); showToast("🎉 Demande envoyée !", "ok"); }} showToast={showToast} t={t} />;
 
   return (
     <div>
@@ -1592,7 +1592,7 @@ const ParentProfile = ({ user, showToast, t = (k) => k, onAddRole, addingRole })
   );
 };
 // ─── BOOKING FORM ─────────────────────────────────────────────
-const BookingForm = ({ sitter, onBack, onConfirm, t = (k) => k }) => {
+const BookingForm = ({ sitter, onBack, onConfirm, showToast, t = (k) => k }) => {
   const [showPayment, setShowPayment] = useState(false);
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate()+1);
   const [date, setDate] = useState(tomorrow.toISOString().slice(0,10));
@@ -1676,7 +1676,7 @@ const BookingForm = ({ sitter, onBack, onConfirm, t = (k) => k }) => {
               </div>
             )}
           </div>
-          <Btn onClick={() => { if(!address){alert(t('addressRequired')); return;} setShowPayment(true); }} variant="teal" size="lg" full>
+          <Btn onClick={() => { if(!address){showToast("⚠️ " + t('addressRequired'), "err"); return;} setShowPayment(true); }} variant="teal" size="lg" full>
             {t('proceedPayment')}
           </Btn>
         </Card>
@@ -1720,7 +1720,7 @@ const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!review.trim()) { setError("Écrivez un commentaire."); return; }
+    if (!review.trim()) { setError(t('reviewCommentRequired')); return; }
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -1733,7 +1733,7 @@ const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
       if (res.ok) { onSubmit(booking.id, rating, review); }
       else { setError(data.error); }
     } catch(e) {
-      setError("Erreur de connexion.");
+      setError(t('connectionError'));
     }
     setLoading(false);
   };
@@ -1746,8 +1746,8 @@ const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
         {/* Header */}
         <div style={{ background:G.night, padding:"24px 28px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
           <div>
-            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.2rem", color:"#fff" }}>⭐ Laisser un avis</div>
-            <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:4 }}>Garde avec {booking.sitterName} · {booking.date}</div>
+            <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.2rem", color:"#fff" }}>{t('leaveReview')}</div>
+            <div style={{ color:G.muted, fontSize:"0.82rem", marginTop:4 }}>{t('reviewCareWith')} {booking.sitterName} · {booking.date}</div>
           </div>
           <button onClick={onClose} style={{ background:"rgba(255,255,255,0.1)", border:"none", color:G.muted, width:32, height:32, borderRadius:"50%", cursor:"pointer", fontSize:"1.1rem" }}>✕</button>
         </div>
@@ -1763,7 +1763,7 @@ const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
                 </button>
               ))}
               <span style={{ color:G.muted, fontSize:"0.85rem", alignSelf:"center", marginLeft:8 }}>
-                {["","Très insuffisant","Insuffisant","Bien","Très bien","Excellent !"][rating]}
+                {["", t('ratingVeryPoor'), t('ratingPoor'), t('ratingGood'), t('ratingVeryGood'), t('ratingExcellent')][rating]}
               </span>
             </div>
           </div>
@@ -1771,10 +1771,10 @@ const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
           {/* Critères */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:20 }}>
             {[
-              ["Ponctualité", "⏰"],
-              ["Bienveillance", "💝"],
-              ["Communication", "💬"],
-              ["Propreté", "✨"],
+              [t('criterionPunctuality'), "⏰"],
+              [t('criterionCare'), "💝"],
+              [t('criterionCommunication'), "💬"],
+              [t('criterionCleanliness'), "✨"],
             ].map(([label, icon]) => (
               <div key={label} style={{ background:G.card, borderRadius:10, padding:"10px 14px", border:`1px solid ${G.border}`, display:"flex", alignItems:"center", gap:8 }}>
                 <span style={{ fontSize:"1.2rem" }}>{icon}</span>
@@ -1798,7 +1798,7 @@ const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
 
           {/* Tags rapides */}
           <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:20 }}>
-            {["Ponctuel(le)","Bienveillant(e)","Organisé(e)","Enfants adorent","Très professionnel(le)","Je recommande"].map(tag => (
+            {[t('reviewTagPunctual'), t('reviewTagCaring'), t('reviewTagOrganized'), t('reviewTagKidsLove'), t('reviewTagProfessional'), t('reviewTagRecommend')].map(tag => (
               <button key={tag} onClick={() => setReview(prev => prev ? prev + ", " + tag.toLowerCase() : tag)} style={{ background:G.teal+"11", border:`1px solid ${G.teal}33`, color:G.teal, borderRadius:100, padding:"4px 12px", fontSize:"0.72rem", fontWeight:600, cursor:"pointer", fontFamily:"'Inter',sans-serif" }}>
                 + {tag}
               </button>
@@ -1810,7 +1810,7 @@ const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
           <div style={{ display:"flex", gap:10 }}>
             <Btn onClick={onClose} variant="ghost" full>{t('cancel')}</Btn>
             <Btn onClick={handleSubmit} variant="teal" full disabled={loading}>
-              {loading ? "Publication…" : "✅ Publier mon avis →"}
+              {loading ? t('publishing') : t('publishReview')}
             </Btn>
           </div>
         </div>
@@ -1820,7 +1820,7 @@ const ReviewModal = ({ booking, onClose, onSubmit, t = (k) => k }) => {
 };
 
 // ─── PARENT BOOKINGS ──────────────────────────────────────────
-const ParentBookings = ({ user, bookings, onCancel, onNav, onReview, t = (k) => k }) => {
+const ParentBookings = ({ user, bookings, onCancel, onNav, onReview, lang = "fr", t = (k) => k }) => {
   const [filter, setFilter] = useState("all");
   const [reviewBooking, setReviewBooking] = useState(null);
   const [chatBooking, setChatBooking] = useState(null);
@@ -1846,6 +1846,7 @@ const ParentBookings = ({ user, bookings, onCancel, onNav, onReview, t = (k) => 
           booking={chatBooking}
           user={user}
           onClose={() => setChatBooking(null)}
+          lang={lang}
           t={t}
         />
       )}
@@ -2070,7 +2071,7 @@ const HouseInfoModal = ({ booking, onClose, t = (k) => k }) => {
 };
 
 // ─── SITTER MISSIONS ──────────────────────────────────────────
-const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) => {
+const SitterMissions = ({ user, bookings, onAccept, onDecline, lang = "fr", t = (k) => k }) => {
   const [filter, setFilter] = useState("all");
   const [chatBooking, setChatBooking] = useState(null);
   const [houseBooking, setHouseBooking] = useState(null);
@@ -2085,6 +2086,7 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) =
           booking={chatBooking}
           user={user}
           onClose={() => setChatBooking(null)}
+          lang={lang}
           t={t}
         />
       )}
@@ -2145,7 +2147,7 @@ const SitterMissions = ({ user, bookings, onAccept, onDecline, t = (k) => k }) =
 const DAY_KEYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
 const HOURS = ["08:00","09:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00","23:00"];
 
-const AvailabilityCalendar = ({ showToast, t = (k) => k }) => {
+const AvailabilityCalendar = ({ showToast, lang = "fr", t = (k) => k }) => {
   const [slots, setSlots] = useState([]);
   const [exceptions, setExceptions] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -2187,12 +2189,12 @@ const AvailabilityCalendar = ({ showToast, t = (k) => k }) => {
       const data = await res.json();
       if (res.ok) showToast("✅ " + data.message, "ok");
       else showToast("❌ " + data.error, "err");
-    } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
     setSaving(false);
   };
 
   const blockDay = async () => {
-    if (!blockDate) { showToast("⚠️ Choisissez une date.", "err"); return; }
+    if (!blockDate) { showToast("⚠️ " + t('availabilityChooseDate'), "err"); return; }
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${API}/availability/exception`, {
@@ -2206,14 +2208,14 @@ const AvailabilityCalendar = ({ showToast, t = (k) => k }) => {
         setBlockDate(""); setBlockReason("");
         showToast("🚫 " + data.message, "ok");
       }
-    } catch(e) { showToast("❌ Erreur de connexion.", "err"); }
+    } catch(e) { showToast("❌ " + t('connectionError'), "err"); }
   };
 
   const removeException = async (date) => {
     const token = localStorage.getItem('token');
     await fetch(`${API}/availability/exception/${date}`, { method:'DELETE', headers:{ 'Authorization':`Bearer ${token}` } });
     setExceptions(prev => prev.filter(e => e.date !== date));
-    showToast("✅ Date rouverte.", "ok");
+    showToast("✅ " + t('availabilityDateReopened'), "ok");
   };
 
   const totalHours = slots.length;
@@ -2222,10 +2224,10 @@ const AvailabilityCalendar = ({ showToast, t = (k) => k }) => {
     <div>
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
         <div>
-          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>📅 Mes disponibilités</div>
-          <div style={{ color:G.muted, fontSize:"0.85rem" }}>Cliquez sur les créneaux où vous êtes disponible · {totalHours}h/semaine</div>
+          <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.3rem", color:"#fff" }}>📅 {t('availabilityTitle')}</div>
+          <div style={{ color:G.muted, fontSize:"0.85rem" }}>{t('availabilityClickHint')} · {totalHours}{t('hoursPerWeekSuffix')}</div>
         </div>
-        <Btn onClick={handleSave} variant="amber" disabled={saving}>{saving?"Sauvegarde…":"💾 Enregistrer"}</Btn>
+        <Btn onClick={handleSave} variant="amber" disabled={saving}>{saving?t('saving'):t('save')}</Btn>
       </div>
 
       {/* Grille hebdomadaire */}
@@ -2262,30 +2264,30 @@ const AvailabilityCalendar = ({ showToast, t = (k) => k }) => {
         </div>
         <div style={{ display:"flex", gap:16, marginTop:14, fontSize:"0.72rem", color:G.muted }}>
           <span style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ width:12, height:12, borderRadius:3, background:G.green, display:"inline-block" }} /> Disponible
+            <span style={{ width:12, height:12, borderRadius:3, background:G.green, display:"inline-block" }} /> {t('availableLegend')}
           </span>
           <span style={{ display:"flex", alignItems:"center", gap:6 }}>
-            <span style={{ width:12, height:12, borderRadius:3, background:"rgba(255,255,255,0.04)", border:`1px solid ${G.border}`, display:"inline-block" }} /> Indisponible
+            <span style={{ width:12, height:12, borderRadius:3, background:"rgba(255,255,255,0.04)", border:`1px solid ${G.border}`, display:"inline-block" }} /> {t('unavailable')}
           </span>
         </div>
       </Card>
 
       {/* Blocage de dates */}
       <Card>
-        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>🚫 Bloquer des dates</div>
+        <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", marginBottom:6 }}>🚫 {t('blockDatesTitle')}</div>
         <div style={{ color:G.muted, fontSize:"0.8rem", marginBottom:14 }}>{t('availabilityBlockHint')}</div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1.5fr auto", gap:10, alignItems:"end" }}>
           <Input label={t('date')} type="date" value={blockDate} onChange={setBlockDate} />
           <Input label={t('reasonOptional')} value={blockReason} onChange={setBlockReason} />
           <div style={{ marginBottom:16 }}>
-            <Btn onClick={blockDay} variant="danger">🚫 Bloquer</Btn>
+            <Btn onClick={blockDay} variant="danger">🚫 {t('blockButton')}</Btn>
           </div>
         </div>
         {exceptions.length > 0 && (
           <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:4 }}>
             {exceptions.map(e => (
               <span key={e.date} style={{ display:"inline-flex", alignItems:"center", gap:8, background:G.coral+"18", border:`1px solid ${G.coral}44`, color:G.coral, borderRadius:100, padding:"5px 12px", fontSize:"0.75rem", fontWeight:600 }}>
-                {new Date(e.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' })}
+                {new Date(e.date).toLocaleDateString(LOCALE_MAP[lang] || "fr-FR", { day:'2-digit', month:'short' })}
                 {e.reason ? ` · ${e.reason}` : ''}
                 <button onClick={() => removeException(e.date)} style={{ background:"none", border:"none", color:G.coral, cursor:"pointer", lineHeight:1 }}>×</button>
               </span>
@@ -2297,7 +2299,7 @@ const AvailabilityCalendar = ({ showToast, t = (k) => k }) => {
   );
 };
 // ─── SITTER PROFILE ───────────────────────────────────────────
-const SitterProfile = ({ user, bookings, showToast, t = (k) => k, onAddRole, addingRole }) => {
+const SitterProfile = ({ user, bookings, showToast, lang = "fr", t = (k) => k, onAddRole, addingRole }) => {
   const my = bookings.filter(b => b.sitterId === user.id && b.status === "completed");
   const [tab, setTab] = useState("profile"); // profile | availability | identity | stats
   const [saving, setSaving] = useState(false);
@@ -2604,7 +2606,7 @@ const SitterProfile = ({ user, bookings, showToast, t = (k) => k, onAddRole, add
         </div>
       )}
 
-      {tab === "availability" && <AvailabilityCalendar showToast={showToast} t={t} />}
+      {tab === "availability" && <AvailabilityCalendar showToast={showToast} lang={lang} t={t} />}
 
       {/* ── TAB IDENTITÉ ── */}
       {tab === "identity" && (
@@ -2762,7 +2764,7 @@ const SitterProfile = ({ user, bookings, showToast, t = (k) => k, onAddRole, add
 };
 
 // ─── CAMERA PAGE ──────────────────────────────────────────────
-const CameraPage = ({ user, t = (k) => k }) => {
+const CameraPage = ({ user, showToast, t = (k) => k }) => {
   const [active, setActive] = useState(false);
   const [stream, setStream] = useState(null);
   const [time, setTime] = useState("--:--:--");
@@ -2777,7 +2779,7 @@ const CameraPage = ({ user, t = (k) => k }) => {
       setStream(s);
       if (videoRef.current) videoRef.current.srcObject = s;
       setActive(true);
-    } catch(e) { alert(t('cameraAccessDenied')); }
+    } catch(e) { showToast("⚠️ " + t('cameraAccessDenied'), "err"); }
   };
   const stop = () => {
     if (stream) stream.getTracks().forEach(t=>t.stop());
@@ -2855,8 +2857,30 @@ const MapView = ({ user, showToast, t = (k) => k }) => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [maxDist, setMaxDist] = useState(10);
+  const [favorites, setFavorites] = useState([]);
   const mapRef = useRef(null);
   const mapInstance = useRef(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch(`${API}/favorites`, { headers:{ 'Authorization':`Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => setFavorites(Array.isArray(data) ? data.map(f => f.id) : []))
+      .catch(console.error);
+  }, []);
+
+  const toggleFavorite = async (sitterId) => {
+    const token = localStorage.getItem('token');
+    const isFav = favorites.includes(sitterId);
+    if (isFav) {
+      await fetch(`${API}/favorites/${sitterId}`, { method:'DELETE', headers:{ 'Authorization':`Bearer ${token}` } });
+      setFavorites(prev => prev.filter(id => id !== sitterId));
+    } else {
+      await fetch(`${API}/favorites/${sitterId}`, { method:'POST', headers:{ 'Authorization':`Bearer ${token}` } });
+      setFavorites(prev => [...prev, sitterId]);
+    }
+  };
   const distance = (lat1, lon1, lat2, lon2) => {
     const R = 6371;
     const dLat = (lat2-lat1) * Math.PI/180;
@@ -2885,14 +2909,14 @@ const MapView = ({ user, showToast, t = (k) => k }) => {
       mapInstance.current = map;
       window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap' }).addTo(map);
       const userIcon = window.L.divIcon({ html:`<div style="background:#2dd4bf;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`, iconSize:[16,16], iconAnchor:[8,8], className:'' });
-      window.L.marker([userLat, userLng], { icon:userIcon }).addTo(map).bindPopup('<strong>📍 Vous êtes ici</strong>');
+      window.L.marker([userLat, userLng], { icon:userIcon }).addTo(map).bindPopup(`<strong>${t('youAreHere')}</strong>`);
       sitters.forEach(s => {
         if (!s.latitude || !s.longitude) return;
         const dist = distance(userLat, userLng, parseFloat(s.latitude), parseFloat(s.longitude));
         const sitterIcon = window.L.divIcon({ html:`<div style="background:${s.verification_status==='verified'?'#fbbf24':'#a78bfa'};width:36px;height:36px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:1.2rem">👩</div>`, iconSize:[36,36], iconAnchor:[18,18], className:'' });
         window.L.marker([parseFloat(s.latitude), parseFloat(s.longitude)], { icon:sitterIcon })
           .addTo(map)
-          .bindPopup(`<div style="font-family:Arial,sans-serif;min-width:180px"><strong>${s.first_name} ${s.last_name}</strong><br/><span style="color:#666;font-size:0.8rem">📍 ${s.city||'N/A'} · ${dist.toFixed(1)} km</span><br/><span style="font-size:0.8rem">⭐ ${s.rating||'—'} · ${s.hourly_rate||'—'}€/h</span>${s.verification_status==='verified'?'<br/><span style="color:#22c55e;font-size:0.75rem">✅ Identité vérifiée</span>':''}</div>`)
+          .bindPopup(`<div style="font-family:Arial,sans-serif;min-width:180px"><strong>${s.first_name} ${s.last_name}</strong><br/><span style="color:#666;font-size:0.8rem">📍 ${s.city||t('notApplicable')} · ${dist.toFixed(1)} km</span><br/><span style="font-size:0.8rem">⭐ ${s.rating||'—'} · ${s.hourly_rate||'—'}€/h</span>${s.verification_status==='verified'?`<br/><span style="color:#22c55e;font-size:0.75rem">${t('verified')}</span>`:''}</div>`)
           .on('click', () => setSelected({ ...s, dist:dist.toFixed(1) }));
       });
     };
@@ -2909,10 +2933,10 @@ const MapView = ({ user, showToast, t = (k) => k }) => {
     .sort((a,b) => a.dist - b.dist);
   return (
     <div>
-      <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>🗺️ Babysitters près de chez vous</div>
+      <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:900, fontSize:"1.5rem", color:"#fff", marginBottom:4 }}>{t('nearbySitters')}</div>
       <div style={{ color:G.muted, fontSize:"0.85rem", marginBottom:16 }}>{t('nearbySubtitle')}</div>
       <div style={{ display:"flex", gap:10, marginBottom:16, flexWrap:"wrap" }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un babysitter…" style={{ flex:1, minWidth:200, background:G.card, border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }} />
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={t('searchSitter')} style={{ flex:1, minWidth:200, background:G.card, border:`1.5px solid ${G.border}`, borderRadius:10, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }} />
         <div style={{ display:"flex", alignItems:"center", gap:8, background:G.card, border:`1px solid ${G.border}`, borderRadius:10, padding:"0 14px" }}>
           <span style={{ color:G.muted, fontSize:"0.78rem" }}>{t('radius')}</span>
           <select value={maxDist} onChange={e=>setMaxDist(parseInt(e.target.value))} style={{ background:"transparent", border:"none", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.85rem", outline:"none", padding:"10px 4px" }}>
@@ -2929,7 +2953,7 @@ const MapView = ({ user, showToast, t = (k) => k }) => {
                 <span style={{ fontSize:"2rem" }}>👩</span>
                 <div style={{ flex:1 }}>
                   <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff" }}>{selected.first_name} {selected.last_name}</div>
-                  <div style={{ color:G.muted, fontSize:"0.78rem" }}>📍 {selected.city} · {selected.dist} km de vous</div>
+                  <div style={{ color:G.muted, fontSize:"0.78rem" }}>📍 {selected.city} · {selected.dist} {t('kmFromYou')}</div>
                 </div>
                 <button onClick={() => setSelected(null)} style={{ background:"none", border:"none", color:G.muted, cursor:"pointer" }}>✕</button>
               </div>
@@ -2944,11 +2968,11 @@ const MapView = ({ user, showToast, t = (k) => k }) => {
                 </div>
               </div>
               {selected.bio && <div style={{ color:G.muted, fontSize:"0.78rem", marginBottom:12, lineHeight:1.5 }}>{selected.bio}</div>}
-              {selected.verification_status==="verified" && <Badge color={G.green} style={{marginBottom:10}}>✅ Identité vérifiée</Badge>}
+              {selected.verification_status==="verified" && <Badge color={G.green} style={{marginBottom:10}}>{t('verified')}</Badge>}
             </Card>
           )}
           <div style={{ fontFamily:"'Nunito',sans-serif", fontWeight:800, color:"#fff", fontSize:"0.9rem" }}>
-            {filteredSitters.length} babysitter{filteredSitters.length>1?"s":""} à moins de {maxDist} km
+            {filteredSitters.length} {filteredSitters.length>1?t('sittersPlural'):t('sitterSingular')} {t('withinDistanceOf')} {maxDist} km
           </div>
           {filteredSitters.length===0 && !loading && (
             <Card style={{ textAlign:"center", padding:20 }}>
@@ -2967,12 +2991,11 @@ const MapView = ({ user, showToast, t = (k) => k }) => {
                     <div style={{ color:G.muted, fontSize:"0.72rem" }}>📍 {s.dist.toFixed(1)} km · ⭐ {s.rating||"—"} · {s.hourly_rate}€/h</div>
                   </div>
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-  {s.verification_status==="verified" && <span style={{ fontSize:"0.7rem", color:G.green }}>✅</span>}
-  <button onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }} style={{ background:"none", border:"none", fontSize:"1rem", cursor:"pointer", padding:2 }}>
-    {favorites.includes(s.id) ? "❤️" : "🤍"}
-  </button>
-</div>
-                  {s.verification_status==="verified" && <span style={{ fontSize:"0.7rem", color:G.green }}>✅</span>}
+                    {s.verification_status==="verified" && <span style={{ fontSize:"0.7rem", color:G.green }}>✅</span>}
+                    <button onClick={(e) => { e.stopPropagation(); toggleFavorite(s.id); }} style={{ background:"none", border:"none", fontSize:"1rem", cursor:"pointer", padding:2 }}>
+                      {favorites.includes(s.id) ? "❤️" : "🤍"}
+                    </button>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -3312,7 +3335,7 @@ const PaymentModal = ({ booking, onClose, onSuccess, showToast, t = (k) => k }) 
 };
 
 // ─── CHAT MODAL ───────────────────────────────────────────────
-const ChatModal = ({ booking, user, onClose, t = (k) => k }) => {
+const ChatModal = ({ booking, user, onClose, lang = "fr", t = (k) => k }) => {
   const [messages, setMessages] = useState([]);
   const [newMsg, setNewMsg] = useState("");
   const [loading, setLoading] = useState(true);
@@ -3374,7 +3397,7 @@ const ChatModal = ({ booking, user, onClose, t = (k) => k }) => {
                 {user.role==="parent" ? booking.sitterName : booking.parentName}
               </div>
               <div style={{ color:G.green, fontSize:"0.72rem", display:"flex", alignItems:"center", gap:4 }}>
-                <Dot color={G.green} pulse /> En ligne
+                <Dot color={G.green} pulse /> {t('chatOnline')}
               </div>
             </div>
           </div>
@@ -3411,8 +3434,8 @@ const ChatModal = ({ booking, user, onClose, t = (k) => k }) => {
                 {msg.content}
               </div>
               <div style={{ fontSize:"0.65rem", color:G.muted, marginTop:3, paddingLeft:4, paddingRight:4 }}>
-                {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' })}
-                {msg.pending && " · Envoi…"}
+                {new Date(msg.created_at).toLocaleTimeString(LOCALE_MAP[lang] || "fr-FR", { hour:'2-digit', minute:'2-digit' })}
+                {msg.pending && " · " + t('chatSending')}
               </div>
             </div>
           ))}
@@ -3425,7 +3448,7 @@ const ChatModal = ({ booking, user, onClose, t = (k) => k }) => {
             value={newMsg}
             onChange={e => setNewMsg(e.target.value)}
             onKeyPress={e => e.key==="Enter" && sendMessage()}
-            placeholder="Écrire un message…"
+            placeholder={t('chatWritePlaceholder')}
             style={{ flex:1, background:"rgba(255,255,255,0.05)", border:`1.5px solid ${G.border}`, borderRadius:12, padding:"10px 16px", color:G.text, fontFamily:"'Inter',sans-serif", fontSize:"0.88rem", outline:"none" }}
           />
           <button onClick={sendMessage} disabled={!newMsg.trim()} style={{ background:G.teal, border:"none", borderRadius:12, width:44, height:44, cursor:newMsg.trim()?"pointer":"not-allowed", opacity:newMsg.trim()?1:0.4, fontSize:"1.1rem", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -3685,11 +3708,11 @@ export default function App() {
   if (page==="home")     return isParent ? <ParentHome user={user} bookings={bookings} onNav={setPage} t={t}/> : <SitterHome user={user} bookings={bookings} onNav={setPage} t={t}/>;
   if (page==="search")   return <SearchSitters onBook={addBooking} showToast={showToast} t={t}/>;
   if (page==="map")      return <MapView user={user} showToast={showToast} t={t}/>;
-  if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview} t={t}/>;
-  if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast} t={t} onAddRole={handleAddRole} addingRole={addingRole}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast} t={t} onAddRole={handleAddRole} addingRole={addingRole}/>;
-  if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission} t={t}/>;
-  if (page==="camera")   return <CameraPage user={user} t={t}/>;
-if (page==="children") return <ChildrenManager showToast={showToast} t={t}/>;
+  if (page==="bookings") return <ParentBookings user={user} bookings={bookings} onCancel={cancelBooking} onNav={setPage} onReview={addReview} lang={lang} t={t}/>;
+  if (page==="profile")  return isParent ? <ParentProfile user={user} showToast={showToast} t={t} onAddRole={handleAddRole} addingRole={addingRole}/> : <SitterProfile user={user} bookings={bookings} showToast={showToast} lang={lang} t={t} onAddRole={handleAddRole} addingRole={addingRole}/>;
+  if (page==="missions") return <SitterMissions user={user} bookings={bookings} onAccept={acceptMission} onDecline={declineMission} lang={lang} t={t}/>;
+  if (page==="camera")   return <CameraPage user={user} showToast={showToast} t={t}/>;
+  if (page==="children") return <ChildrenManager showToast={showToast} t={t}/>;
 };
 
   return (
