@@ -79,6 +79,114 @@ const Icon = ({ name, size = 18, color = "currentColor", style = {} }) => {
     </svg>
   );
 };
+// ─── ADAPTATION MOBILE (iPhone / Android) ─────────────────────
+// L'application est construite en styles inline. Cette feuille les
+// surcharge sous 760px pour un affichage correct sur téléphone.
+const MobileStyles = () => (
+  <style>{`
+    /* Zone sûre iPhone : encoche en haut, barre d'accueil en bas */
+    :root {
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left: env(safe-area-inset-left, 0px);
+      --safe-right: env(safe-area-inset-right, 0px);
+    }
+
+    @media (max-width: 760px) {
+
+      /* Toute grille à colonnes fixes passe sur une seule colonne.
+         Les grilles auto-fit/auto-fill sont déjà adaptatives : on les laisse. */
+      [style*="grid-template-columns"]:not([style*="auto-fit"]):not([style*="auto-fill"]) {
+        grid-template-columns: 1fr !important;
+      }
+
+      /* Marges latérales resserrées */
+      main > div {
+        padding-left: max(16px, var(--safe-left)) !important;
+        padding-right: max(16px, var(--safe-right)) !important;
+        padding-top: 20px !important;
+      }
+
+      /* Barre de navigation sur deux rangées.
+         Les éléments flex se compriment avant de se replier : il faut
+         donc forcer flex-basis 100% sur la rangée d'onglets. */
+      nav {
+        position: fixed !important;
+        height: auto !important;
+        padding: calc(8px + var(--safe-top)) 12px 8px !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        align-items: center !important;
+      }
+      /* Rangée 1 — marque à gauche, compte à droite */
+      nav > div:nth-child(1) {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+        overflow: hidden !important;
+      }
+      nav > div:nth-child(3) {
+        flex: 0 0 auto !important;
+      }
+      /* Rangée 2 — onglets, pleine largeur, défilement horizontal */
+      nav > div:nth-child(2) {
+        order: 3 !important;
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        min-width: 100% !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 2px;
+      }
+      nav > div:nth-child(2)::-webkit-scrollbar { display: none; }
+      /* Prénom masqué : il tient déjà dans le badge de rôle */
+      nav > div:nth-child(3) > span:first-child { display: none !important; }
+
+      /* Contenu décalé sous une nav devenue plus haute */
+      main { padding-top: calc(116px + var(--safe-top)) !important; }
+
+      /* Safari zoome dès qu'un champ fait moins de 16px : on l'empêche */
+      input, select, textarea { font-size: 16px !important; }
+
+      /* Cibles tactiles confortables (recommandation Apple : 44px) */
+      button, a[href], [role="button"] { min-height: 40px; }
+
+      /* Modales : plein écran, défilement interne */
+      [style*="position:fixed"][style*="inset:0"] > div,
+      [style*="position: fixed"][style*="inset: 0"] > div {
+        max-width: 100% !important;
+        max-height: calc(100vh - var(--safe-top) - var(--safe-bottom)) !important;
+        margin: var(--safe-top) 0 var(--safe-bottom) !important;
+        overflow-y: auto !important;
+        border-radius: 14px !important;
+      }
+
+      /* Tableaux (factures, statuts) : défilement plutôt que débordement */
+      table { display: block; overflow-x: auto; white-space: nowrap; }
+
+      /* Titres un cran plus bas sur petit écran */
+      h1 { font-size: 1.5rem !important; }
+      h2 { font-size: 1.05rem !important; }
+
+      /* Aucun texte ne doit déborder de son conteneur */
+      body { overflow-x: hidden; }
+      * { min-width: 0; }
+      nav span, nav button { white-space: nowrap; }
+    }
+
+    /* Très petits écrans (iPhone SE) : icônes seules dans la nav */
+    @media (max-width: 400px) {
+      nav > div:nth-child(2) button { padding: 7px 9px !important; gap: 0 !important; }
+      nav > div:nth-child(2) button > svg + * { display: none; }
+      nav > div:last-child > span { display: none; }
+    }
+
+    /* Bas de page dégagé de la barre d'accueil iPhone */
+    @media (max-width: 760px) {
+      footer { padding-bottom: calc(24px + var(--safe-bottom)) !important; }
+    }
+  `}</style>
+);
+
 // ─── ERROR BOUNDARY ───────────────────────────────────────────
 // Évite l'écran blanc : capture les erreurs JS et affiche un message lisible.
 class ErrorBoundary extends Component {
@@ -3639,6 +3747,7 @@ export default function App() {
 
   if (isConfirmPage) return (
     <>
+      <MobileStyles />
       <style>{`@keyframes bw-blink{50%{opacity:0}} *{box-sizing:border-box} body{background:#0f1923}`}</style>
       <ConfirmPage onLogin={handleLogin} t={t} />
     </>
@@ -3646,6 +3755,7 @@ export default function App() {
 
   if (isResetPage) return (
     <>
+      <MobileStyles />
       <style>{`*{box-sizing:border-box} body{background:#0f1923}`}</style>
       <ResetPasswordPage onBack={() => window.location.href = "/"} t={t} />
     </>
@@ -3722,6 +3832,7 @@ export default function App() {
 
   if (!user) return (
     <>
+      <MobileStyles />
       <style>{`
         @keyframes bw-blink{50%{opacity:0}}
         @keyframes bw-pulse{0%,100%{box-shadow:0 0 0 4px rgba(74,222,128,0.33)}50%{box-shadow:0 0 0 8px rgba(74,222,128,0)}}
@@ -3751,6 +3862,7 @@ export default function App() {
 
   return (
     <>
+      <MobileStyles />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&family=Inter:wght@400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}

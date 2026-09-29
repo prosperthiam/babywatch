@@ -134,6 +134,14 @@ export default function LegalPage({ doc = "privacy", onBack }) {
         *{box-sizing:border-box;margin:0;padding:0}
         .lg-wrap{max-width:760px;margin:0 auto;padding:0 24px}
         .lg-tab:focus-visible{outline:2px solid ${C.teal};outline-offset:2px}
+        @media(max-width:760px){
+          .lg-wrap{padding:0 max(16px, env(safe-area-inset-left, 0px))}
+          header{padding-top:env(safe-area-inset-top, 0px)}
+          main{padding-bottom:calc(60px + env(safe-area-inset-bottom, 0px))!important}
+          h1{font-size:1.4rem!important}
+          h2{font-size:1.02rem!important}
+          table{font-size:0.78rem!important}
+        }
       `}</style>
 
       {/* En-tête */}
